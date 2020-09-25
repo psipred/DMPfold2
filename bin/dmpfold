@@ -3,17 +3,20 @@
 import argparse
 from dmpfold import protocol_fdf, protocol_cns, protocol_xplor
 
-parser = argparse.ArgumentParser(description="Protein structure prediction with DMPfold2. See https://github.com/psipred/DMPfold2 for documentation and citation information.")
+parser = argparse.ArgumentParser(description=("Protein structure prediction with DMPfold2. "
+    "See https://github.com/psipred/DMPfold2 for documentation and citation information."))
 parser.add_argument("-i", "--input", required=True,
     help="the target sequence and sequence alignment in aln format")
+parser.add_argument("-o", "--output", required=True,
+    help="the output directory to be created")
 parser.add_argument("-p", "--protocol", choices=["fdf", "cns", "xplor"], required=True,
     help="the method for generating models from predicted constraints")
 
 args = parser.parse_args()
 
 if args.protocol == "fdf":
-    protocol_fdf()
+    protocol_fdf(args.input, args.output)
 elif args.protocol == "cns":
-    protocol_cns()
+    protocol_cns(args.input, args.output)
 elif args.protocol == "xplor":
-    protocol_xplor()
+    protocol_xplor(args.input, args.output)
