@@ -34,9 +34,6 @@ min_speed     = 0.002  # Minimisation speed
 k_dih         = 1.0    # Force constant for dihedrals
 omega_dev     = 0.2    # Omega dihedral deviation
 k_hb_dist     = 5.0    # Force constant for hydrogen bond distances
-hb_cutoff_gen = 6.0    # Cutoff for general hydrogen bond potential
-k_hb_gen      = 0.0    # Force constant for general hydrogen bond distance potential
-k_ang_hb_gen  = 0.0    # Force constant for general hydrogen bond angle potential
 hb_res_sep    = 10     # Minimum separation for predicted hydrogen bonds
 
 keep_tempdir = False # Whether to keep temporary directory with intermediate files
@@ -149,12 +146,6 @@ class ForceFolder(torch.nn.Module):
                 coords_last[atom] = self.coords[atom].clone() + torch.randn(
                                 self.n_trajs, self.n_res, 3, device=dev) * starting_vel * timestep
 
-        diag_mask = torch.eye(self.n_res, device=dev)
-        for offset in (1, 2):
-            diag_mask += torch.diag_embed(torch.ones(self.n_res - offset, device=dev), offset= offset)
-            diag_mask += torch.diag_embed(torch.ones(self.n_res - offset, device=dev), offset=-offset)
-        diag_mask = (1.0 - diag_mask).unsqueeze(0).expand(self.n_trajs, -1, -1)
-
         sigmas_rep = sigmas.view(1, 1, 1, n_bins)
 
         for step_n in range(n_steps + n_min_steps):
@@ -190,57 +181,13 @@ class ForceFolder(torch.nn.Module):
             norm_diffs_ho = diffs_ho / dists_ho.unsqueeze(3)
             violate_min_hb = (self.hb_dists_min - dists_ho).clamp(min=0.0)
             violate_max_hb = (dists_ho - self.hb_dists_max).clamp(min=0.0)
-            close_hbonds = (dists_ho < hb_cutoff_gen).to(torch.float) * diag_mask
-            violate_max_hb_gen = close_hbonds * (dists_ho - hb_cutoff_gen).clamp(min=0.0)
             forces_min = weight_violate_min * k_hb_dist * violate_min_hb ** pairwise_exponent_min
             forces_max = k_hb_dist * violate_max_hb ** pairwise_exponent_max
-            forces_max += k_hb_gen * violate_max_hb_gen ** pairwise_exponent_max
             pair_accs = forces_min.unsqueeze(3) * norm_diffs_ho - forces_max.unsqueeze(3) * norm_diffs_ho
             accs["H"] -= pair_accs.sum(dim=2)
             accs["O"] += pair_accs.sum(dim=1)
             if debug_n > 0 and step_n % debug_n == 0:
                 print(f"hb{pair_accs.sum(dim=2).abs().mean().item():9.3f}", end="  ")
-
-            # Forces due to hydrogen bond angles
-            # All close hydrogen bonds have an angle constraint
-            crep_n = self.coords["N"].unsqueeze(1).expand(-1, self.n_res, -1, -1)
-            diffs_hn = (crep_n - crep_h).transpose(1, 2)
-            ba_norms = diffs_ho.norm(dim=3)
-            bc_norms = diffs_hn.norm(dim=3)
-            angs = torch.acos(((diffs_ho * diffs_hn).sum(dim=3) / (ba_norms * bc_norms).clamp(
-                                min=0.1, max=100.0)).clamp(min=-1.0, max=1.0))
-            violate = angs - true_ang["O-H-N"]
-            forces = k_ang_hb_gen * close_hbonds * violate
-            cross_ba_bc = torch.cross(diffs_ho, diffs_hn, dim=3)
-            fa_vec = torch.cross(-diffs_ho, cross_ba_bc, dim=3)
-            fc_vec = torch.cross( diffs_hn, cross_ba_bc, dim=3)
-            # Don't divide by length
-            fa = forces.unsqueeze(3) * fa_vec / fa_vec.norm(dim=3).unsqueeze(3).clamp(min=0.1)
-            fc = forces.unsqueeze(3) * fc_vec / fc_vec.norm(dim=3).unsqueeze(3).clamp(min=0.1)
-            fb = -fa - fc
-            accs["O"] += fa.sum(dim=1)
-            accs["H"] += fb.sum(dim=2)
-            accs["N"] += fc.sum(dim=2)
-            if debug_n > 0 and step_n % debug_n == 0:
-                print(f"hba{fb.sum(dim=2).abs().mean().item():9.3f}", end="  ")
-
-            crep_c = self.coords["C"].unsqueeze(1).expand(-1, self.n_res, -1, -1)
-            diffs_oc = (crep_c - crep_o).transpose(1, 2)
-            ba_norms = diffs_oc.norm(dim=3)
-            bc_norms = diffs_ho.norm(dim=3)
-            angs = torch.acos(((diffs_oc * -diffs_ho).sum(dim=3) / (ba_norms * bc_norms).clamp(
-                                min=0.1, max=100.0)).clamp(min=-1.0, max=1.0))
-            violate = angs - true_ang["C-O-H"]
-            forces = k_ang_hb_gen * close_hbonds * violate
-            cross_ba_bc = torch.cross(diffs_oc, -diffs_ho, dim=3)
-            fa_vec = torch.cross(-diffs_oc, cross_ba_bc, dim=3)
-            fc_vec = torch.cross(-diffs_ho, cross_ba_bc, dim=3)
-            fa = forces.unsqueeze(3) * fa_vec / fa_vec.norm(dim=3).unsqueeze(3).clamp(min=0.1)
-            fc = forces.unsqueeze(3) * fc_vec / fc_vec.norm(dim=3).unsqueeze(3).clamp(min=0.1)
-            fb = -fa - fc
-            accs["C"] += fa.sum(dim=1)
-            accs["O"] += fb.sum(dim=1)
-            accs["H"] += fc.sum(dim=2)
 
             # Forces due to vdw exclusion
             # Only check for pairs of each atom type
