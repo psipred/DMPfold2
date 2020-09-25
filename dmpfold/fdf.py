@@ -10,19 +10,12 @@ from contextlib import suppress, redirect_stdout
 import torch
 import torch.nn.functional as F
 import numpy as np
-from scipy.spatial.distance import pdist, squareform
-
 from modeller import *
 from modeller.automodel import *
 from modeller.scripts import complete_pdb
-
 from PeptideBuilder import PeptideBuilder
 
-from .nn.multigram.nndef_dist_gru2resnet import GRUResNet as GRUResNetInit
-from .nn.multigram_iter.nndef_iterdist_gru2resnet import GRUResNet as GRUResNetIter
-
-dev    = "cuda" if torch.cuda.is_available() else "cpu" # Force-directed folding device
-dev_nn = "cpu" # Neural network inference device
+dev = "cuda" if torch.cuda.is_available() else "cpu" # Force-directed folding device
 
 n_iters       = 3      # Number of iterations
 n_trajs       = 20     # Number of folding trajectories
@@ -386,36 +379,6 @@ class ForceFolder(torch.nn.Module):
                                 self.coords[atom][si, ri, 0].item(), self.coords[atom][si, ri, 1].item(),
                                 self.coords[atom][si, ri, 2].item(), elements[atom]))
 
-# Reweight MSA based on cutoff
-def reweight(msa1hot, cutoff):
-    id_min = msa1hot.shape[1] * cutoff
-    id_mtx = torch.einsum("ikl,jkl->ij", msa1hot, msa1hot)
-    id_mask = id_mtx > id_min
-    w = 1.0 / id_mask.float().sum(dim=-1)
-    return w
-
-# Shrunk covariance inversion
-def fast_dca(msa1hot, weights, penalty=4.5):
-    nr, nc, ns = msa1hot.shape
-    x = msa1hot.view(nr, -1)
-    num_points = weights.sum() - torch.sqrt(weights.mean())
-
-    mean = (x * weights[:, None]).sum(dim=0, keepdim=True) / num_points
-    x = (x - mean) * torch.sqrt(weights[:, None])
-
-    cov = (x.t() @ x) / num_points
-    cov_reg = cov + torch.eye(nc * ns, device=dev_nn) * penalty / torch.sqrt(weights.sum())
-
-    inv_cov = torch.inverse(cov_reg)
-    x1 = inv_cov.view(nc, ns, nc, ns)
-    x2 = x1.transpose(1, 2).contiguous()
-    features = x2.reshape(nc, nc, ns * ns)
-
-    x3 = torch.sqrt((x1[:, :-1, :, :-1] ** 2).sum(dim=(1, 3))) * (1 - torch.eye(nc, device=dev_nn))
-    apc = x3.sum(dim=0, keepdim=True) * x3.sum(dim=1, keepdim=True) / x3.sum()
-    contacts = (x3 - apc) * (1 - torch.eye(nc, device=dev_nn))
-    return torch.cat((features, contacts[:, :, None]), dim=2)
-
 # Gaussian weights for distogram forcefield
 def gaussian_weights(output):
     # Default value means close residue pairs and those with highest density in the final bin
@@ -547,54 +510,16 @@ def modeller_fa_and_score(env, ali_fp, iter_n, output):
                 os.remove(f"traj_{ti + 1}_fa.pdb")
     return np.min(dope_scores)
 
-# Extract a C-alpha distance matrix from a PDB file
-def read_dmap(fp, length):
-    coords = []
-    with open(fp) as refpdbfile:
-        for line in refpdbfile:
-            if line[:4] == "ATOM" and line[12:16] == " CA ":
-                # Split the line
-                pdb_fields = [line[:6], line[6:11], line[12:16], line[17:20], line[21],
-                                line[22:26], line[30:38], line[38:46], line[46:54]]
-                coords.append(np.array([float(pdb_fields[6]), float(pdb_fields[7]),
-                                        float(pdb_fields[8])]))
-    assert length == len(coords)
-    cv = np.asarray(coords)
-    init_dmap = squareform(pdist(cv, "euclidean")).astype(np.float32).reshape(1,1, length, length)
-    init_dmap = torch.from_numpy(init_dmap).type(torch.FloatTensor).contiguous().to(dev_nn)
-    return init_dmap
-
-def protocol_fdf(aln_file, out_file):
+def protocol_fdf(aln_filepath, out_file):
     start_time = datetime.now()
-    print("Predicting structure from the alignment in", aln_file)
+    print("Predicting structure from the alignment in", aln_filepath)
 
-    network_init = GRUResNetInit(512, 128).eval().to(dev_nn)
-    if n_iters > 1:
-        network_iter = GRUResNetIter(512, 128).eval().to(dev_nn)
-
-    script_dir = os.path.dirname(os.path.realpath(__file__))
-
-    with open(aln_file, "r") as f:
+    with open(aln_filepath, "r") as f:
         aln = f.read().splitlines()
-
-    aa_trans = str.maketrans("ARNDCQEGHILKMFPSTWYVBJOUXZ-.", "ABCDEFGHIJKLMNOPQRSTUUUUUUVV")
-
-    nseqs = len(aln)
     sequence = aln[0]
     length = len(sequence)
-    alnmat = (np.frombuffer("".join(aln).translate(aa_trans).encode("latin-1"), dtype=np.uint8) - ord("A")).reshape(nseqs,length)
     print("Sequence has", length, "residues:")
     print(sequence)
-
-    inputs = torch.from_numpy(alnmat).type(torch.LongTensor).to(dev_nn)
-
-    msa1hot = F.one_hot(torch.clamp(inputs, max=20), 21).float()
-    w = reweight(msa1hot, cutoff=0.8)
-
-    f2d_dca = fast_dca(msa1hot, w).float() if nseqs > 1 else torch.zeros((length, length, 442), device=dev_nn)
-    f2d_dca = f2d_dca.permute(2,0,1).unsqueeze(0)
-
-    inputs2 = f2d_dca
 
     # Create a temporary directory to work in that will be removed at the end
     for i in count(start=1):
@@ -629,29 +554,10 @@ def protocol_fdf(aln_file, out_file):
     print(f"Starting iteration 1 of {n_iters}")
     print()
 
-    network_init.eval()
-    with torch.no_grad():
-        model_dir_init = os.path.join(script_dir, "nn", "multigram")
-        network_init.load_state_dict(torch.load(os.path.join(model_dir_init, "FINAL_fullmap_distcov_model1.pt"),
-                                        map_location=dev_nn))
-        output = network_init(inputs, inputs2)
-        network_init.load_state_dict(torch.load(os.path.join(model_dir_init, "FINAL_fullmap_distcov_model2.pt"),
-                                        map_location=dev_nn))
-        output += network_init(inputs, inputs2)
-        network_init.load_state_dict(torch.load(os.path.join(model_dir_init, "FINAL_fullmap_distcov_model3.pt"),
-                                        map_location=dev_nn))
-        output += network_init(inputs, inputs2)
-        network_init.load_state_dict(torch.load(os.path.join(model_dir_init, "FINAL_fullmap_distcov_model4.pt"),
-                                        map_location=dev_nn))
-        output += network_init(inputs, inputs2)
-        output /= 4
-        output[0,0:2,:,:] = F.softmax(output[0,0:2,:,:], dim=0)
-        output[0,2:36,:,:] = F.softmax(0.5 * (output[0,2:36,:,:] + output[0,2:36,:,:].transpose(-1,-2)), dim=0)
-        output[0,36:70,:,:] = F.softmax(output[0,36:70,:,:], dim=0)
-        output[0,70:104,:,:] = F.softmax(output[0,70:104,:,:], dim=0)
+    output = aln_to_predictions(aln_filepath)
 
     print("Neural network inference done, generating models")
-    print("")
+    print()
     force_folder = ForceFolder(sequence, n_trajs, gaussian_weights(output),
                             hb_constraints(output, hb_prob_init), dihedral_constraints(output, 1))
     satisfaction_score = force_folder.fold(n_steps)
@@ -660,33 +566,13 @@ def protocol_fdf(aln_file, out_file):
     iter_scores = [best_score]
 
     for iter_n in range(2, n_iters + 1):
-        # Combine standard input with distance map from last iteration best model
-        inputs2 = torch.cat((f2d_dca, read_dmap(f"best_iter_{iter_n - 1}.pdb", length)), dim=1)
-
         print(f"Starting iteration {iter_n} of {n_iters}")
         print()
 
-        network_iter.eval()
-        with torch.no_grad():
-            model_dir_iter = os.path.join(script_dir, "nn", "multigram_iter")
-            network_iter.load_state_dict(torch.load(os.path.join(model_dir_iter, "FINAL_fullmap_distcov_model1.pt"),
-                                            map_location=dev_nn))
-            output = network_iter(inputs, inputs2)
-            network_iter.load_state_dict(torch.load(os.path.join(model_dir_iter, "FINAL_fullmap_distcov_model2.pt"),
-                                            map_location=dev_nn))
-            output += network_iter(inputs, inputs2)
-            network_iter.load_state_dict(torch.load(os.path.join(model_dir_iter, "FINAL_fullmap_distcov_model3.pt"),
-                                            map_location=dev_nn))
-            output += network_iter(inputs, inputs2)
-            output /= 3
-            output = torch.max(output, network_iter(inputs, inputs2))
-            output[0,0:2,:,:] = F.softmax(output[0,0:2,:,:], dim=0)
-            output[0,2:36,:,:] = F.softmax(0.5 * (output[0,2:36,:,:] + output[0,2:36,:,:].transpose(-1,-2)), dim=0)
-            output[0,36:70,:,:] = F.softmax(output[0,36:70,:,:], dim=0)
-            output[0,70:104,:,:] = F.softmax(output[0,70:104,:,:], dim=0)
+        output = aln_to_predictions_iter(aln_filepath, f"best_iter_{iter_n - 1}.pdb")
 
         print("Neural network inference done, generating models")
-        print("")
+        print()
         force_folder = ForceFolder(sequence, n_trajs, gaussian_weights(output),
                         hb_constraints(output, hb_prob_iter), dihedral_constraints(output, iter_n))
         satisfaction_score = force_folder.fold(n_steps)
