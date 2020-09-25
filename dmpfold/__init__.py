@@ -1,1 +1,2 @@
-from .protocols import protocol_fdf, protocol_cns, protocol_xplor
+from .fdf import protocol_fdf, ForceFolder
+from .protocols import protocol_cns, protocol_xplor

@@ -1,6 +1,3 @@
-def protocol_fdf():
-    print("test fdf")
-
 def protocol_cns():
     print("CNS not implemented yet")
 
