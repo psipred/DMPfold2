@@ -10,10 +10,12 @@ from contextlib import suppress, redirect_stdout
 import torch
 import torch.nn.functional as F
 import numpy as np
+from PeptideBuilder import PeptideBuilder
 from modeller import *
 from modeller.automodel import *
 from modeller.scripts import complete_pdb
-from PeptideBuilder import PeptideBuilder
+
+from .networks import aln_to_predictions, aln_to_predictions_iter
 
 dev = "cuda" if torch.cuda.is_available() else "cpu" # Force-directed folding device
 
@@ -554,7 +556,7 @@ def aln_to_model_fdf(aln_filepath, out_file):
     print(f"Starting iteration 1 of {n_iters}")
     print()
 
-    output = aln_to_predictions(aln_filepath)
+    output = aln_to_predictions(os.path.join("..", aln_filepath))
 
     print("Neural network inference done, generating models")
     print()
@@ -569,7 +571,7 @@ def aln_to_model_fdf(aln_filepath, out_file):
         print(f"Starting iteration {iter_n} of {n_iters}")
         print()
 
-        output = aln_to_predictions_iter(aln_filepath, f"best_iter_{iter_n - 1}.pdb")
+        output = aln_to_predictions_iter(os.path.join("..", aln_filepath), f"best_iter_{iter_n - 1}.pdb")
 
         print("Neural network inference done, generating models")
         print()

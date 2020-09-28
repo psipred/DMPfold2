@@ -86,7 +86,7 @@ def aln_to_predictions(aln_filepath, device="cpu"):
 
     network.eval()
     with torch.no_grad():
-        model_dir = os.path.join(script_dir, "nn", "multigram")
+        model_dir = os.path.join(scriptdir, "nn", "multigram")
         network.load_state_dict(torch.load(os.path.join(model_dir, "FINAL_fullmap_distcov_model1.pt"),
                                 map_location=device))
         output = network(inputs, inputs2)
@@ -139,7 +139,7 @@ def aln_to_predictions_iter(aln_filepath, ref_pdb_filepath, device="cpu"):
 
     network.eval()
     with torch.no_grad():
-        model_dir = os.path.join(script_dir, "nn", "multigram_iter")
+        model_dir = os.path.join(scriptdir, "nn", "multigram_iter")
         network.load_state_dict(torch.load(os.path.join(model_dir, "FINAL_fullmap_distcov_model1.pt"),
                                 map_location=device))
         output = network(inputs, inputs2)
