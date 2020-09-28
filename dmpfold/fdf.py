@@ -510,7 +510,7 @@ def modeller_fa_and_score(env, ali_fp, iter_n, output):
                 os.remove(f"traj_{ti + 1}_fa.pdb")
     return np.min(dope_scores)
 
-def protocol_fdf(aln_filepath, out_file):
+def aln_to_model_fdf(aln_filepath, out_file):
     start_time = datetime.now()
     print("Predicting structure from the alignment in", aln_filepath)
 
