@@ -157,3 +157,42 @@ def aln_to_predictions_iter(aln_filepath, ref_pdb_filepath, device="cpu"):
         output[0,70:104,:,:] = F.softmax(output[0,70:104,:,:], dim=0)
 
     return output
+
+def write_predictions(output, prefix):
+    length = output.size(2)
+
+    with open(prefix + ".hb", "w") as f:
+        for wi in range(length):
+            for wj in range(length):
+                if abs(wi - wj) > 1:
+                    probs = output.data[0,0:2,wi,wj]
+                    print("{} {}".format(wi+1,wj+1), end='', file=f)
+                    print(" 0 3.5 {}".format(torch.sum(probs[1:2])), end='', file=f)
+                    print('', file=f)
+
+    with open(prefix + ".dist", "w") as f:
+        for wi in range(0, length-5):
+            for wj in range(wi+5, length):
+                probs = output.data[0,2:36,wi,wj]
+                print("{} {}".format(wi+1,wj+1), end='', file=f)
+                for k in range(34):
+                    print(" {}".format(probs[k]), end='', file=f)
+                print('', file=f)
+
+    with open(prefix + ".phi", "w") as f:
+        for wi in range(length):
+            for wj in range(wi+1, length):
+                probs = output.data[0,36:70,wi,wj]
+                print("{} {}".format(wi+1,wj+1), end='', file=f)
+                for k in range(34):
+                    print(" {}".format(probs[k]), end='', file=f)
+                print('', file=f)
+
+    with open(prefix + ".psi", "w") as f:
+        for wi in range(length):
+            for wj in range(wi+1, length):
+                probs = output.data[0,70:104,wi,wj]
+                print("{} {}".format(wi+1,wj+1), end='', file=f)
+                for k in range(34):
+                    print(" {}".format(probs[k]), end='', file=f)
+                print('', file=f)
