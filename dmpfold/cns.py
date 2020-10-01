@@ -1,5 +1,5 @@
 import os
-from random import randrange
+from random import random, randrange
 from math import pi, degrees, atan2
 from subprocess import run
 
@@ -15,6 +15,8 @@ phiprob1 = 0.88
 psiprob1 = 0.98
 phiprob2 = 0.88
 psiprob2 = 0.98
+
+n_bins = 34
 
 # Write CNS folding script
 def write_dgsa_file(in_file, out_file, target, n_models):
@@ -47,7 +49,6 @@ def write_dihedral_constraints(output, out_file, angle, prob):
 
 # Convert predicted dihedrals from bins to constraints
 def dihedral_bins_to_constraints(fields, pthresh):
-    n_bins = fields.size(0)
     pmax = 0.0
     for k in range(n_bins):
         if fields[k] > pmax:
@@ -77,6 +78,49 @@ def dihedral_bins_to_constraints(fields, pthresh):
     meets_threshold = psum > pthresh
     return ang, sdev, meets_threshold
 
+def write_hbond_constraints(output, out_file):
+    pass
+
+def write_contact_constraints(output, out_file):
+    length = output.size(2)
+    pthresh = random() * 0.6 + 0.3
+    with open(out_file, "w") as of:
+        for wi in range(0, length - 5):
+            for wj in range(wi + 5, length):
+                fields = output.data[0, 2:36, wi, wj]
+                pmax = 0.0
+                for k in range(n_bins):
+                    if fields[k] > pmax:
+                        pmax = fields[k]
+                        kmax = k
+                if kmax < (n_bins - 1):
+                    psum = pmax
+                    k1 = kmax - 1
+                    k2 = kmax + 1
+                    lastk1, lastk2 = kmax, kmax
+                    while 0.0 < psum < pthresh and (k1 >= 0 or k2 < (n_bins - 1)):
+                        if k1 >= 0:
+                            p1 = fields[k1]
+                        else:
+                            p1 = -1.0
+                        if k2 < (n_bins - 1):
+                            p2 = fields[k2]
+                        else:
+                            p2 = -1.0
+
+                        if p1 >= p2:
+                            psum += p1
+                            lastk1 = k1
+                            k1 -= 1
+                        else:
+                            psum += p2
+                            lastk2 = k2
+                            k2 += 1
+                    if psum >= pthresh:
+                        dmin = 3.5 + 0.5 * lastk1
+                        dmax = 4.0 + 0.5 * lastk2
+                        of.write(f"{wi + 1} {wj + 1} {dmin} {dmax} {psum}\n")
+
 def aln_to_model_cns(aln_filepath, out_dir):
     with open(aln_filepath, "r") as f:
         aln = f.read().splitlines()
@@ -104,8 +148,11 @@ def aln_to_model_cns(aln_filepath, out_dir):
 
     write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, 1)
 
-    write_hbond_constraints("hbond.tbl", "ssnoe.tbl")
-    write_contact_constraints("contact.tbl")
+    write_hbond_constraints(output, "hbcontacts.current")
+    run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl", shell=True)
+    run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl", shell=True)
+
+    write_contact_constraints(output, "contact.tbl")
 
     run("cns < dgsa.inp > dgsa.log", shell=True)
 
@@ -119,8 +166,11 @@ def aln_to_model_cns(aln_filepath, out_dir):
 
         write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, 1)
 
-        write_hbond_constraints("hbond.tbl", "ssnoe.tbl")
-        write_contact_constraints("contact.tbl")
+        write_hbond_constraints(output, "hbcontacts.current")
+        run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl", shell=True)
+        run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl", shell=True)
+
+        write_contact_constraints(output, "contact.tbl")
 
         run("cns < dgsa.inp > dgsa.log", shell=True)
 
