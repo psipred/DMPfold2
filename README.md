@@ -25,6 +25,7 @@ To generate models, you will need to set up at least one of the following 3 appr
 ### CNS
 
 cns
+source before run
 
 ### Xplor-NIH
 
