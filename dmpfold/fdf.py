@@ -74,6 +74,7 @@ true_ang = {
         "C-O-H" : pi  ,
 }
 
+# Generate protein models from predicted constraints using force-directed folding
 class ForceFolder(torch.nn.Module):
     def __init__(self, sequence, n_trajs, distance_preds, hb_preds, dihedral_preds):
         super(ForceFolder, self).__init__()
@@ -126,8 +127,8 @@ class ForceFolder(torch.nn.Module):
                                                 1, 1, n_bins)).pow(2)) / sigmas.view(1, 1, n_bins)
         self.min_cb_energy = min_cb_energies.sum()
 
+    # Run folding simulations for a given number of steps
     def fold(self, n_steps):
-        # Run folding simulations for a given number of steps
         # See https://arxiv.org/pdf/1401.1181.pdf for derivation of forces
         if integrator == "vel":
             vels = {}
@@ -367,8 +368,8 @@ class ForceFolder(torch.nn.Module):
         # Return mean distogram satisfaction score
         return cb_energies.sum() / (self.min_cb_energy * self.n_trajs)
 
+    # Write coordinates to a PDB file
     def write_coords(self, out_prefix):
-        # Write coordinates to a PDB file
         for si in range(self.n_trajs):
             with open(f"{out_prefix}_{si + 1}.pdb", "w") as of:
                 ai = 0
@@ -512,6 +513,7 @@ def modeller_fa_and_score(env, ali_fp, iter_n, output):
                 os.remove(f"traj_{ti + 1}_fa.pdb")
     return np.min(dope_scores)
 
+# Protein structure prediction with force-directed folding
 def aln_to_model_fdf(aln_filepath, out_file):
     start_time = datetime.now()
     print("Predicting structure from the alignment in", aln_filepath)

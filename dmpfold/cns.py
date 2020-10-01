@@ -3,6 +3,7 @@ from random import random, randrange
 from math import pi, degrees, atan2
 from subprocess import run
 
+import torch
 import numpy as np
 
 from .networks import aln_to_predictions, aln_to_predictions_iter
@@ -17,6 +18,7 @@ phiprob2 = 0.88
 psiprob2 = 0.98
 
 n_bins = 34
+modcheck_files = ("dope.scr", "qmodcheck", "qmodope_mainens", "modcheckpot.dat")
 
 # Write CNS folding script
 def write_dgsa_file(in_file, out_file, target, n_models):
@@ -28,7 +30,7 @@ def write_dgsa_file(in_file, out_file, target, n_models):
         text = text.replace("_NMODELS_"    , str(n_models))
         of.write(text)
 
-# Append dihedral constraints to a file
+# Append dihedral CNS constraints to a file
 def write_dihedral_constraints(output, out_file, angle, prob):
     n_res = output.size(2)
     for wi in range(n_res - 1):
@@ -78,9 +80,21 @@ def dihedral_bins_to_constraints(fields, pthresh):
     meets_threshold = psum > pthresh
     return ang, sdev, meets_threshold
 
+# Write hydrogen bond CNS constraints to a file
 def write_hbond_constraints(output, out_file):
-    pass
+    length = output.size(2)
+    topomin = randrange(0, 6) + 2
+    minprob = random() * 0.5 + 0.3
+    with open(out_file, "w") as of:
+        for wi in range(length):
+            for wj in range(length):
+                if abs(wi - wj) >= topomin:
+                    probs = output.data[0, 0:2, wi, wj]
+                    score = torch.sum(probs[1:2])
+                    if score > minprob:
+                        of.write(f"{wi + 1} {wj + 1} 0 3.5 {score}\n")
 
+# Write contact CNS constraints to a file
 def write_contact_constraints(output, out_file):
     length = output.size(2)
     pthresh = random() * 0.6 + 0.3
@@ -121,6 +135,7 @@ def write_contact_constraints(output, out_file):
                         dmax = 4.0 + 0.5 * lastk2
                         of.write(f"{wi + 1} {wj + 1} {dmin} {dmax} {psum}\n")
 
+# Protein structure prediction with CNS
 def aln_to_model_cns(aln_filepath, out_dir):
     with open(aln_filepath, "r") as f:
         aln = f.read().splitlines()
@@ -130,11 +145,11 @@ def aln_to_model_cns(aln_filepath, out_dir):
     print(sequence)
     target = os.path.split(aln_filepath)[1].rsplit(".", 1)[0]
 
-    with open("input.fasta", "w") as f:
+    with open(f"{target}.fasta", "w") as f:
         f.write(">SEQ\n")
         f.write(sequence + "\n")
     bin_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "bin")
-    run(f"{bin_dir}/fasta2tlc < input.fasta > input.seq", shell=True)
+    run(f"{bin_dir}/fasta2tlc < {target}.fasta > input.seq", shell=True)
 
     cns_cmd = "cns"
     cnsfile_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cnsfiles")
@@ -146,15 +161,21 @@ def aln_to_model_cns(aln_filepath, out_dir):
     write_dihedral_constraints(output, "dihedral.tbl", "phi", phiprob1)
     write_dihedral_constraints(output, "dihedral.tbl", "psi", psiprob1)
 
+    modcheck_dir = cnsfile_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "modcheck")
+    for modcheck_file in modcheck_files:
+        os.symlink(f"{modcheck_dir}/{modcheck_file}", modcheck_file)
+
     write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, 1)
 
-    write_hbond_constraints(output, "hbcontacts.current")
-    run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl", shell=True)
-    run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl", shell=True)
+    for model_n in nmodels1:
+        write_hbond_constraints(output, "hbcontacts.current")
+        run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl", shell=True)
+        run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl", shell=True)
 
-    write_contact_constraints(output, "contact.tbl")
+        write_contact_constraints(output, "contacts.current")
+        run(f"{bin_dir}/contact2noe {target}.fasta contacts.current > contact.tbl", shell=True)
 
-    run("cns < dgsa.inp > dgsa.log", shell=True)
+        run("cns < dgsa.inp > dgsa.log", shell=True)
 
     run("./qmodope_mainens ensemble.1.pdb", shell=True)
 
@@ -166,14 +187,19 @@ def aln_to_model_cns(aln_filepath, out_dir):
 
         write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, 1)
 
-        write_hbond_constraints(output, "hbcontacts.current")
-        run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl", shell=True)
-        run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl", shell=True)
+        for model_n in nmodels2:
+            write_hbond_constraints(output, "hbcontacts.current")
+            run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl", shell=True)
+            run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl", shell=True)
 
-        write_contact_constraints(output, "contact.tbl")
+            write_contact_constraints(output, "contacts.current")
+            run(f"{bin_dir}/contact2noe {target}.fasta contacts.current > contact.tbl", shell=True)
 
-        run("cns < dgsa.inp > dgsa.log", shell=True)
+            run("cns < dgsa.inp > dgsa.log", shell=True)
 
         run(f"./qmodope_mainens ensemble.{iter_n}.pdb", shell=True)
 
         run(f"{bin_dir}/tmclust ensemble.pdb", shell=True)
+
+    for modcheck_file in modcheck_files:
+        os.remove(modcheck_file)

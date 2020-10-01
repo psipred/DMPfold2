@@ -349,6 +349,7 @@ def aln_to_predictions_iter(aln_filepath, ref_pdb_filepath, device="cpu"):
 
     return output
 
+# Write neural network predictions to files
 def write_predictions(output, prefix):
     length = output.size(2)
 
