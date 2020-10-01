@@ -15,12 +15,12 @@ git clone https://github.com/psipred/DMPfold2
 cd DMPfold2
 pip install -e .
 ```
-[This will become `pip install dmpfold` on registering in PyPI]
+[This will become `pip install dmpfold` on registering in PyPI.]
 This will automatically install NumPy, SciPy and PeptideBuilder if required.
 
 The above steps are sufficient to predict distograms with DMPfold2.
 To generate models, you will need to set up at least one of the following 3 approaches.
-See the DMPfold2 paper for a comparison of the approaches.
+[See the DMPfold2 paper for a comparison of the approaches.]
 
 ### CNS
 

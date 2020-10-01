@@ -299,7 +299,6 @@ def aln_to_predictions(aln_filepath, device="cpu"):
 
     return output
 
-
 # Use network and model structure to make predictions from alignment
 def aln_to_predictions_iter(aln_filepath, ref_pdb_filepath, device="cpu"):
     # Create neural network model

@@ -19,17 +19,17 @@ from .networks import aln_to_predictions, aln_to_predictions_iter
 
 dev = "cuda" if torch.cuda.is_available() else "cpu" # Force-directed folding device
 
-n_iters       = 3      # Number of iterations
-n_trajs       = 20     # Number of folding trajectories
-n_steps       = 20_000 # Steps per folding simulation
-gauss_sigma   = 1.25   # Width of Gaussians
-k_vdw         = 100.0  # Force constant for vdw exclusion
-n_min_steps   = 5000   # Minimisation steps to finish simulation
-min_speed     = 0.002  # Minimisation speed
-k_dih         = 1.0    # Force constant for dihedrals
-omega_dev     = 0.2    # Omega dihedral deviation
-k_hb_dist     = 5.0    # Force constant for hydrogen bond distances
-hb_res_sep    = 10     # Minimum separation for predicted hydrogen bonds
+n_iters = 3 # Number of iterations
+n_trajs = 20 # Number of folding trajectories
+n_steps = 5_000 # Steps per folding simulation
+gauss_sigma = 1.25 # Width of Gaussians
+k_vdw = 100.0 # Force constant for vdw exclusion
+n_min_steps = 1000 # Minimisation steps to finish simulation
+min_speed = 0.002 # Minimisation speed
+k_dih = 1.0 # Force constant for dihedrals
+omega_dev = 0.2 # Omega dihedral deviation
+k_hb_dist = 5.0 # Force constant for hydrogen bond distances
+hb_res_sep = 10 # Minimum separation for predicted hydrogen bonds
 
 keep_tempdir = False # Whether to keep temporary directory with intermediate files
 record_n = 4_000 # Interval for logging trajectory, set to 0 to not print
@@ -396,7 +396,7 @@ def gaussian_weights(output):
     return gaussian_weights
 
 # Predicted hydrogen bond constraints
-def hb_constraints(output, hb_prob):
+def hbond_constraints(output, hb_prob):
     # Row is hydrogen, column is oxygen
     # Default values mean residue pairs without explicit values have min but not max defined
     n_res = output.size(2)
@@ -409,7 +409,7 @@ def hb_constraints(output, hb_prob):
     return {"min": hb_dists_min, "max": hb_dists_max}
 
 # Convert predicted dihedrals from bins to constraints
-def dihedral_bins_to_constraints(fields, pthresh):
+def dihedral_bins_to_constraints_fdf(fields, pthresh):
     pmax = 0.0
     for k in range(n_bins):
         if fields[k] > pmax:
@@ -419,7 +419,7 @@ def dihedral_bins_to_constraints(fields, pthresh):
     k1 = kmax - 1
     k2 = kmax + 1
     lastk1, lastk2 = kmax, kmax
-    while psum < pthresh and k2 - k1 < (n_bins - 1):
+    while psum < pthresh and (k2 - k1) < (n_bins - 1):
         p1 = fields[k1 % n_bins]
         p2 = fields[k2 % n_bins]
         if p1 > p2:
@@ -448,13 +448,13 @@ def dihedral_constraints(output, iter_n):
     for wi in range(n_res - 1):
         # Need to clone here as the values are modified
         probs = output.data[0, 36:70, wi, wi + 1].clone()
-        ang, sdev, meets_threshold = dihedral_bins_to_constraints(probs,
+        ang, sdev, meets_threshold = dihedral_bins_to_constraints_fdf(probs,
                         phi_prob_init if iter_n == 1 else phi_prob_iter)
         if meets_threshold:
             phis_mean[wi + 1] = radians(ang)
             phis_dev [wi + 1] = radians(sdev)
         probs = output.data[0, 70:104, wi, wi + 1].clone()
-        ang, sdev, meets_threshold = dihedral_bins_to_constraints(probs,
+        ang, sdev, meets_threshold = dihedral_bins_to_constraints_fdf(probs,
                         psi_prob_init if iter_n == 1 else psi_prob_iter)
         if meets_threshold:
             psis_mean[wi] = radians(ang)
@@ -561,7 +561,7 @@ def aln_to_model_fdf(aln_filepath, out_file):
     print("Neural network inference done, generating models")
     print()
     force_folder = ForceFolder(sequence, n_trajs, gaussian_weights(output),
-                            hb_constraints(output, hb_prob_init), dihedral_constraints(output, 1))
+                            hbond_constraints(output, hb_prob_init), dihedral_constraints(output, 1))
     satisfaction_score = force_folder.fold(n_steps)
     force_folder.write_coords("traj")
     best_score = modeller_fa_and_score(env, ali_fp, 1, output)
@@ -576,7 +576,7 @@ def aln_to_model_fdf(aln_filepath, out_file):
         print("Neural network inference done, generating models")
         print()
         force_folder = ForceFolder(sequence, n_trajs, gaussian_weights(output),
-                        hb_constraints(output, hb_prob_iter), dihedral_constraints(output, iter_n))
+                        hbond_constraints(output, hb_prob_iter), dihedral_constraints(output, iter_n))
         satisfaction_score = force_folder.fold(n_steps)
         force_folder.write_coords("traj")
         best_score = modeller_fa_and_score(env, ali_fp, iter_n, output)
