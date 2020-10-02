@@ -1,6 +1,7 @@
 import os
 from random import random, randrange
 from math import pi, degrees, atan2
+from datetime import datetime
 from subprocess import run
 
 import torch
@@ -137,6 +138,9 @@ def write_contact_constraints(output, out_file):
 
 # Protein structure prediction with CNS
 def aln_to_model_cns(aln_filepath, out_dir):
+    start_time = datetime.now()
+    print("Predicting structure from the alignment in", aln_filepath)
+
     with open(aln_filepath, "r") as f:
         aln = f.read().splitlines()
     sequence = aln[0]
@@ -145,23 +149,33 @@ def aln_to_model_cns(aln_filepath, out_dir):
     print(sequence)
     target = os.path.split(aln_filepath)[1].rsplit(".", 1)[0]
 
+    if os.path.isdir(out_dir):
+        print(f"Output directory {out_dir} already exists, exiting")
+        sys.exit()
+    else:
+        cwd = os.getcwd()
+        os.mkdir(out_dir)
+        os.chdir(out_dir)
+
+    dmpfold_dir  = os.path.dirname(os.path.realpath(__file__))
+    bin_dir      = os.path.join(dmpfold_dir, "bin")
+    cnsfile_dir  = os.path.join(dmpfold_dir, "cnsfiles")
+    modcheck_dir = os.path.join(dmpfold_dir, "modcheck")
+
     with open(f"{target}.fasta", "w") as f:
         f.write(">SEQ\n")
         f.write(sequence + "\n")
-    bin_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "bin")
     run(f"{bin_dir}/fasta2tlc < {target}.fasta > input.seq", shell=True)
 
     cns_cmd = "cns"
-    cnsfile_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "cnsfiles")
     run(f"{cns_cmd} < {cnsfile_dir}/gseq.inp > gseq.log", shell=True)
     run(f"{cns_cmd} < {cnsfile_dir}/extn.inp > extn.log", shell=True)
 
-    output = aln_to_predictions(aln_filepath)
+    output = aln_to_predictions(os.path.join(cwd, aln_filepath))
 
     write_dihedral_constraints(output, "dihedral.tbl", "phi", phiprob1)
     write_dihedral_constraints(output, "dihedral.tbl", "psi", psiprob1)
 
-    modcheck_dir = cnsfile_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)), "modcheck")
     for modcheck_file in modcheck_files:
         os.symlink(f"{modcheck_dir}/{modcheck_file}", modcheck_file)
 
@@ -180,7 +194,7 @@ def aln_to_model_cns(aln_filepath, out_dir):
     run("./qmodope_mainens ensemble.1.pdb", shell=True)
 
     for iter_n in range(1, ncycles):
-        output = aln_to_predictions_iter(aln_filepath, "best_qdope.pdb")
+        output = aln_to_predictions_iter(os.path.join(cwd, aln_filepath), "best_qdope.pdb")
 
         write_dihedral_constraints(output, "dihedral.tbl", "phi", phiprob2)
         write_dihedral_constraints(output, "dihedral.tbl", "psi", psiprob2)
@@ -203,3 +217,7 @@ def aln_to_model_cns(aln_filepath, out_dir):
 
     for modcheck_file in modcheck_files:
         os.remove(modcheck_file)
+
+    os.chdir(cwd)
+    print("Writing output to", out_dir)
+    print("Done in", str(datetime.now() - start_time).split(".")[0])
