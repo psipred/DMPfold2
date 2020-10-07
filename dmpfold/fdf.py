@@ -21,10 +21,10 @@ dev = "cuda" if torch.cuda.is_available() else "cpu" # Force-directed folding de
 
 n_iters = 3 # Number of iterations
 n_trajs = 20 # Number of folding trajectories
-n_steps = 5_000 # Steps per folding simulation
+n_steps = 20_000 # Steps per folding simulation
 gauss_sigma = 1.25 # Width of Gaussians
 k_vdw = 100.0 # Force constant for vdw exclusion
-n_min_steps = 1000 # Minimisation steps to finish simulation
+n_min_steps = 5_000 # Minimisation steps to finish simulation
 min_speed = 0.002 # Minimisation speed
 k_dih = 1.0 # Force constant for dihedrals
 omega_dev = 0.2 # Omega dihedral deviation
