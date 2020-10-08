@@ -1,4 +1,5 @@
 import os
+import shutil
 from random import random, randrange
 from math import pi, degrees, atan2
 from datetime import datetime
@@ -190,13 +191,13 @@ def aln_to_model_cns(aln_filepath, out_dir):
     run(f"{cns_cmd} < {cnsfile_dir}/gseq.inp > gseq.log", shell=True)
     run(f"{cns_cmd} < {cnsfile_dir}/extn.inp > extn.log", shell=True)
 
+    for modcheck_file in modcheck_files:
+        os.symlink(f"{modcheck_dir}/{modcheck_file}", modcheck_file)
+
     output = aln_to_predictions(os.path.join(cwd, aln_filepath))
 
     write_dihedral_constraints(output, "dihedral.tbl", "phi", phiprob1)
     write_dihedral_constraints(output, "dihedral.tbl", "psi", psiprob1)
-
-    for modcheck_file in modcheck_files:
-        os.symlink(f"{modcheck_dir}/{modcheck_file}", modcheck_file)
 
     write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, 1)
 
