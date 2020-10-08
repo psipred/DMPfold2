@@ -1,3 +1,4 @@
+import sys
 import os
 import shutil
 from random import random, randrange
@@ -201,7 +202,7 @@ def aln_to_model_cns(aln_filepath, out_dir):
 
     write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, 1)
 
-    for model_n in nmodels1:
+    for model_n in range(nmodels1):
         generate_model(output, bin_dir, target, 0)
 
     run("./qmodope_mainens ensemble.1.pdb", shell=True)
@@ -217,7 +218,7 @@ def aln_to_model_cns(aln_filepath, out_dir):
 
         write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, 1)
 
-        for model_n in nmodels2:
+        for model_n in range(nmodels2):
             generate_model(output, bin_dir, target, iter_n)
 
         run(f"./qmodope_mainens ensemble.{iter_n + 1}.pdb", shell=True)
