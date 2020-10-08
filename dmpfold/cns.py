@@ -136,6 +136,25 @@ def write_contact_constraints(output, out_file):
                         dmax = 4.0 + 0.5 * lastk2
                         of.write(f"{wi + 1} {wj + 1} {dmin} {dmax} {psum}\n")
 
+# Sample constraints and generate a single model with CNS
+def generate_model(output, bin_dir, target, iter_n):
+    write_hbond_constraints(output, "hbcontacts.current")
+    run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl", shell=True)
+    run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl", shell=True)
+
+    write_contact_constraints(output, "contacts.current")
+    run(f"{bin_dir}/contact2noe {target}.fasta contacts.current > contact.tbl", shell=True)
+
+    run("cns < dgsa.inp > dgsa.log", shell=True)
+
+    with open(f"{target}_1.pdb") as f, open(f"ensemble.{iter_n + 1}.pdb", "a") as of:
+        for line in f:
+            if line.startswith("ATOM") and line[12] != "H" and line[13] != "H":
+                of.write(line)
+        of.write("END\n")
+    os.remove(f"{target}_1.pdb")
+    os.remove(f"{target}_sub_embed_1.pdb")
+
 # Protein structure prediction with CNS
 def aln_to_model_cns(aln_filepath, out_dir):
     start_time = datetime.now()
@@ -182,18 +201,14 @@ def aln_to_model_cns(aln_filepath, out_dir):
     write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, 1)
 
     for model_n in nmodels1:
-        write_hbond_constraints(output, "hbcontacts.current")
-        run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl", shell=True)
-        run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl", shell=True)
-
-        write_contact_constraints(output, "contacts.current")
-        run(f"{bin_dir}/contact2noe {target}.fasta contacts.current > contact.tbl", shell=True)
-
-        run("cns < dgsa.inp > dgsa.log", shell=True)
+        generate_model(output, bin_dir, target, 0)
 
     run("./qmodope_mainens ensemble.1.pdb", shell=True)
 
     for iter_n in range(1, ncycles):
+        shutil.move("contacts.current", f"contacts.{iter_n}")
+        shutil.move("hbcontacts.current", f"hbcontacts.{iter_n}")
+
         output = aln_to_predictions_iter(os.path.join(cwd, aln_filepath), "best_qdope.pdb")
 
         write_dihedral_constraints(output, "dihedral.tbl", "phi", phiprob2)
@@ -202,18 +217,26 @@ def aln_to_model_cns(aln_filepath, out_dir):
         write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, 1)
 
         for model_n in nmodels2:
-            write_hbond_constraints(output, "hbcontacts.current")
-            run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl", shell=True)
-            run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl", shell=True)
+            generate_model(output, bin_dir, target, iter_n)
 
-            write_contact_constraints(output, "contacts.current")
-            run(f"{bin_dir}/contact2noe {target}.fasta contacts.current > contact.tbl", shell=True)
+        run(f"./qmodope_mainens ensemble.{iter_n + 1}.pdb", shell=True)
 
-            run("cns < dgsa.inp > dgsa.log", shell=True)
+    with open("ensemble.pdb", "w") as of:
+        for iter_n in range(ncycles):
+            with open(f"ensemble.{iter_n + 1}.pdb") as f:
+                of.write(f.read())
+    run(f"{bin_dir}/tmclust ensemble.pdb", shell=True)
 
-        run(f"./qmodope_mainens ensemble.{iter_n}.pdb", shell=True)
+    if os.path.isfile("CLUSTER_001.pdb"):
+        run("./qmodope_mainens CLUSTER_001.pdb", shell=True)
+    else:
+        run("./qmodope_mainens ensemble.pdb", shell=True)
+    shutil.move("best_qdope.pdb", "final_1.pdb")
 
-        run(f"{bin_dir}/tmclust ensemble.pdb", shell=True)
+    for cn in range(2, 6):
+        if os.path.isfile(f"CLUSTER_00{cn}.pdb"):
+            run(f"./qmodope_mainens CLUSTER_00{cn}.pdb", shell=True)
+            shutil.move("best_qdope.pdb", f"final_{cn}.pdb")
 
     for modcheck_file in modcheck_files:
         os.remove(modcheck_file)
