@@ -21,6 +21,7 @@ psiprob2 = 0.98
 
 n_bins = 34
 modcheck_files = ("dope.scr", "qmodcheck", "qmodope_mainens", "modcheckpot.dat")
+cns_cmd = "cns"
 
 # Write CNS folding script
 def write_dgsa_file(in_file, out_file, target, n_models):
@@ -146,7 +147,7 @@ def generate_model(output, bin_dir, target, iter_n):
     write_contact_constraints(output, "contacts.current")
     run(f"{bin_dir}/contact2noe {target}.fasta contacts.current > contact.tbl", shell=True)
 
-    run("cns < dgsa.inp > dgsa.log", shell=True)
+    run(f"{cns_cmd} < dgsa.inp > dgsa.log", shell=True)
 
     with open(f"{target}_1.pdb") as f, open(f"ensemble.{iter_n + 1}.pdb", "a") as of:
         for line in f:
@@ -187,7 +188,6 @@ def aln_to_model_cns(aln_filepath, out_dir):
         f.write(sequence + "\n")
     run(f"{bin_dir}/fasta2tlc < {target}.fasta > input.seq", shell=True)
 
-    cns_cmd = "cns"
     run(f"{cns_cmd} < {cnsfile_dir}/gseq.inp > gseq.log", shell=True)
     run(f"{cns_cmd} < {cnsfile_dir}/extn.inp > extn.log", shell=True)
 
