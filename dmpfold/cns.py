@@ -1,11 +1,11 @@
 import sys
 import os
 import shutil
+import subprocess
 from random import random, randrange
 from math import pi, degrees, atan2
 from datetime import datetime
 from operator import itemgetter
-from subprocess import run
 
 import torch
 import numpy as np
@@ -24,6 +24,12 @@ psiprob2 = 0.98
 n_bins = 34
 modcheck_files = ("dope.scr", "qmodcheck", "qmodope_mainens", "modcheckpot.dat")
 cns_cmd = "cns"
+
+def run(cmd):
+    proc = subprocess.run(cmd, shell=True)
+    if proc.returncode != 0:
+        print(f"Command `{cmd}` gave return code {proc.returncode}, exiting")
+        sys.exit()
 
 # Write CNS folding script
 def write_dgsa_file(in_file, out_file, target, n_models):
@@ -178,13 +184,13 @@ def order_pdb_file(pdb_file):
 # Sample constraints and generate a single model with CNS
 def generate_model(output, bin_dir, target, iter_n):
     write_hbond_constraints(output, "hbcontacts.current")
-    run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl", shell=True)
-    run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl", shell=True)
+    run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl")
+    run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl")
 
     write_contact_constraints(output, "contacts.current")
-    run(f"{bin_dir}/contact2noe {target}.fasta contacts.current > contact.tbl", shell=True)
+    run(f"{bin_dir}/contact2noe {target}.fasta contacts.current > contact.tbl")
 
-    run(f"{cns_cmd} < dgsa.inp > dgsa.log", shell=True)
+    run(f"{cns_cmd} < dgsa.inp > dgsa.log")
 
     with open(f"ensemble.{iter_n + 1}.pdb", "a") as of:
         for line in order_pdb_file(f"{target}_1.pdb"):
@@ -222,10 +228,10 @@ def aln_to_model_cns(aln_filepath, out_dir):
     with open(f"{target}.fasta", "w") as f:
         f.write(">SEQ\n")
         f.write(sequence + "\n")
-    run(f"{bin_dir}/fasta2tlc < {target}.fasta > input.seq", shell=True)
+    run(f"{bin_dir}/fasta2tlc < {target}.fasta > input.seq")
 
-    run(f"{cns_cmd} < {cnsfile_dir}/gseq.inp > gseq.log", shell=True)
-    run(f"{cns_cmd} < {cnsfile_dir}/extn.inp > extn.log", shell=True)
+    run(f"{cns_cmd} < {cnsfile_dir}/gseq.inp > gseq.log")
+    run(f"{cns_cmd} < {cnsfile_dir}/extn.inp > extn.log")
 
     for modcheck_file in modcheck_files:
         os.symlink(f"{modcheck_dir}/{modcheck_file}", modcheck_file)
@@ -240,7 +246,7 @@ def aln_to_model_cns(aln_filepath, out_dir):
     for model_n in range(nmodels1):
         generate_model(output, bin_dir, target, 0)
 
-    run("./qmodope_mainens ensemble.1.pdb", shell=True)
+    run("./qmodope_mainens ensemble.1.pdb")
 
     for iter_n in range(1, ncycles):
         shutil.move("contacts.current", f"contacts.{iter_n}")
@@ -256,23 +262,23 @@ def aln_to_model_cns(aln_filepath, out_dir):
         for model_n in range(nmodels2):
             generate_model(output, bin_dir, target, iter_n)
 
-        run(f"./qmodope_mainens ensemble.{iter_n + 1}.pdb", shell=True)
+        run(f"./qmodope_mainens ensemble.{iter_n + 1}.pdb")
 
     with open("ensemble.pdb", "w") as of:
         for iter_n in range(ncycles):
             with open(f"ensemble.{iter_n + 1}.pdb") as f:
                 of.write(f.read())
-    run(f"{bin_dir}/tmclust ensemble.pdb", shell=True)
+    run(f"{bin_dir}/tmclust ensemble.pdb")
 
     if os.path.isfile("CLUSTER_001.pdb"):
-        run("./qmodope_mainens CLUSTER_001.pdb", shell=True)
+        run("./qmodope_mainens CLUSTER_001.pdb")
     else:
-        run("./qmodope_mainens ensemble.pdb", shell=True)
+        run("./qmodope_mainens ensemble.pdb")
     shutil.move("best_qdope.pdb", "final_1.pdb")
 
     for cn in range(2, 6):
         if os.path.isfile(f"CLUSTER_00{cn}.pdb"):
-            run(f"./qmodope_mainens CLUSTER_00{cn}.pdb", shell=True)
+            run(f"./qmodope_mainens CLUSTER_00{cn}.pdb")
             shutil.move("best_qdope.pdb", f"final_{cn}.pdb")
 
     for modcheck_file in modcheck_files:
