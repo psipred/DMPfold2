@@ -11,6 +11,7 @@ import torch
 import numpy as np
 
 from .networks import aln_to_predictions, aln_to_predictions_iter
+from .fdf import one_to_three_aas
 
 ncycles = 2 # Number of cycles
 nmodels1 = 100 # Number of models in first cycle
@@ -25,11 +26,27 @@ n_bins = 34
 modcheck_files = ("dope.scr", "qmodcheck", "qmodope_mainens", "modcheckpot.dat")
 cns_cmd = "cns"
 
+# Run a command and exit if the return code is not 0
 def run(cmd):
     proc = subprocess.run(cmd, shell=True)
     if proc.returncode != 0:
         print(f"Command `{cmd}` gave return code {proc.returncode}, exiting")
         sys.exit()
+
+# Write sequence file for CNS
+def write_seq_file(in_file, out_file):
+    seq = ""
+    with open(in_file) as f:
+        for line in f:
+            if not line.startswith(">"):
+                seq += line.rstrip()
+    with open(out_file, "w") as of:
+        for ri, res in enumerate(seq):
+            of.write(one_to_three_aas[res])
+            if ri % 12 == 11:
+                of.write("\n")
+            else:
+                of.write(" ")
 
 # Write CNS folding script
 def write_dgsa_file(in_file, out_file, target, n_models):
@@ -228,7 +245,7 @@ def aln_to_model_cns(aln_filepath, out_dir):
     with open(f"{target}.fasta", "w") as f:
         f.write(">SEQ\n")
         f.write(sequence + "\n")
-    run(f"{bin_dir}/fasta2tlc < {target}.fasta > input.seq")
+    write_seq_file(f"{target}.fasta", "input.seq")
 
     run(f"{cns_cmd} < {cnsfile_dir}/gseq.inp > gseq.log")
     run(f"{cns_cmd} < {cnsfile_dir}/extn.inp > extn.log")
