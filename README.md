@@ -56,7 +56,7 @@ Sequence alignments can be obtained from a target sequence in a number of ways, 
 Residue-residue distances, hydrogen bonds and dihedral angles can be predicted using the Python interface:
 ```python
 from dmpfold import aln_to_predictions, write_predictions
-output = aln_to_predictions(aln_filepath)
+output = aln_to_predictions(aln_filepath) # Shape (1, 104, n_res, n_res)
 write_predictions(output, "out")
 ```
 You can also run structure prediction from within Python, for example:

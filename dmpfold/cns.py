@@ -4,6 +4,7 @@ import shutil
 from random import random, randrange
 from math import pi, degrees, atan2
 from datetime import datetime
+from operator import itemgetter
 from subprocess import run
 
 import torch
@@ -139,6 +140,41 @@ def write_contact_constraints(output, out_file):
                         dmax = 4.0 + 0.5 * lastk2
                         of.write(f"{wi + 1} {wj + 1} {dmin} {dmax} {psum}\n")
 
+# Order atoms within each residue in a PDB file
+def order_pdb_file(pdb_file):
+    lines = []
+    res_lines = []
+    atom_number = 1
+    with open(pdb_file) as f:
+        for line in f:
+            if line.startswith("ATOM") and line[12] != "H" and line[13] != "H":
+                resnum = int(line[22:26])
+                if len(res_lines) == 0 and atom_number == 1:
+                    last_resnum = resnum
+                if resnum != last_resnum:
+                    for res_line, sorting_char in sorted(res_lines, key=itemgetter(1)):
+                        lines.append(res_line[:6] + str(atom_number).rjust(5) + res_line[11:])
+                        atom_number += 1
+                    res_lines = []
+                atom_name = line[12:16]
+                if atom_name == " N  ":
+                    sorting_char = "1"
+                elif atom_name == " CA ":
+                    sorting_char = "2"
+                elif atom_name == " C  ":
+                    sorting_char = "3"
+                elif atom_name == " O  ":
+                    sorting_char = "4"
+                elif atom_name == " OXT":
+                    sorting_char = "ZZ"
+                else:
+                    sorting_char = atom_name[2:].translate(str.maketrans("GDEZH", "CDEFG"))
+                res_lines.append((line, sorting_char))
+        for res_line, sorting_char in sorted(res_lines, key=itemgetter(1)):
+            lines.append(res_line[:6] + str(atom_number).rjust(5) + res_line[11:])
+            atom_number += 1
+    return lines
+
 # Sample constraints and generate a single model with CNS
 def generate_model(output, bin_dir, target, iter_n):
     write_hbond_constraints(output, "hbcontacts.current")
@@ -150,10 +186,9 @@ def generate_model(output, bin_dir, target, iter_n):
 
     run(f"{cns_cmd} < dgsa.inp > dgsa.log", shell=True)
 
-    with open(f"{target}_1.pdb") as f, open(f"ensemble.{iter_n + 1}.pdb", "a") as of:
-        for line in f:
-            if line.startswith("ATOM") and line[12] != "H" and line[13] != "H":
-                of.write(line)
+    with open(f"ensemble.{iter_n + 1}.pdb", "a") as of:
+        for line in order_pdb_file(f"{target}_1.pdb"):
+            of.write(line)
         of.write("END\n")
     os.remove(f"{target}_1.pdb")
     os.remove(f"{target}_sub_embed_1.pdb")
