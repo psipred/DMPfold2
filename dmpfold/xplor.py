@@ -5,7 +5,7 @@ from datetime import datetime
 from glob import glob
 
 from .networks import aln_to_predictions, aln_to_predictions_iter
-from .cns import *
+from .utils import *
 
 ncycles = 2 # Number of cycles
 nmodels = 10 # Number of models

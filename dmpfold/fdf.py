@@ -1,10 +1,10 @@
 import sys
 import os
 import shutil
-from math import pi, radians
-from random import random
-from itertools import count
 from datetime import datetime
+from random import random
+from math import pi, radians
+from itertools import count
 from contextlib import suppress, redirect_stdout
 
 import torch
@@ -16,6 +16,7 @@ from modeller.automodel import *
 from modeller.scripts import complete_pdb
 
 from .networks import n_bins, aln_to_predictions, aln_to_predictions_iter
+from .utils import one_to_three_aas
 
 dev = "cuda" if torch.cuda.is_available() else "cpu" # Force-directed folding device
 
@@ -56,11 +57,6 @@ psi_prob_init, psi_prob_iter = 0.16, 0.71
 
 dist_bin_centres = torch.tensor([3.75 + 0.5 * i for i in range(n_bins)], device=dev)
 sigmas = torch.tensor([gauss_sigma] * n_bins, device=dev)
-
-one_to_three_aas = {"C": "CYS", "D": "ASP", "S": "SER", "Q": "GLN", "K": "LYS",
-                    "I": "ILE", "P": "PRO", "T": "THR", "F": "PHE", "N": "ASN",
-                    "G": "GLY", "H": "HIS", "L": "LEU", "R": "ARG", "W": "TRP",
-                    "A": "ALA", "V": "VAL", "E": "GLU", "Y": "TYR", "M": "MET"}
 
 atoms = ("N", "CA", "C", "O", "CB", "H")
 elements = {"N": "N", "CA": "C", "C": "C", "O": "O", "CB": "C", "H": "H"}
