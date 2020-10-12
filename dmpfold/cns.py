@@ -48,9 +48,13 @@ def write_seq_file(in_file, out_file):
             else:
                 of.write(" ")
 
+# Random number as called with $RANDOM in Bash
+def random_seed():
+    return randrange(0, 32768)
+
 # Write CNS folding script
 def write_dgsa_file(in_file, out_file, target, n_models):
-    seed = randrange(0, 32768)
+    seed = random_seed()
     with open(in_file) as f, open(out_file, "w") as of:
         text = f.read()
         text = text.replace("_TARGET_NAME_", target       )
@@ -109,10 +113,12 @@ def dihedral_bins_to_constraints(fields, pthresh):
     return ang, sdev, meets_threshold
 
 # Write hydrogen bond CNS constraints to a file
-def write_hbond_constraints(output, out_file):
+def write_hbond_constraints(output, out_file, topomin, minprob):
+    if topomin == "random":
+        topomin = randrange(0, 6) + 2
+    if minprob == "random":
+        minprob = random() * 0.5 + 0.3
     length = output.size(2)
-    topomin = randrange(0, 6) + 2
-    minprob = random() * 0.5 + 0.3
     with open(out_file, "w") as of:
         for wi in range(length):
             for wj in range(length):
@@ -123,9 +129,10 @@ def write_hbond_constraints(output, out_file):
                         of.write(f"{wi + 1} {wj + 1} 0 3.5 {score}\n")
 
 # Write contact CNS constraints to a file
-def write_contact_constraints(output, out_file):
+def write_contact_constraints(output, out_file, pthresh):
+    if pthresh == "random":
+        pthresh = random() * 0.6 + 0.3
     length = output.size(2)
-    pthresh = random() * 0.6 + 0.3
     with open(out_file, "w") as of:
         for wi in range(0, length - 5):
             for wj in range(wi + 5, length):
@@ -198,13 +205,31 @@ def order_pdb_file(pdb_file):
             atom_number += 1
     return lines
 
+def cluster_models(bin_dir, ncycles):
+    with open("ensemble.pdb", "w") as of:
+        for iter_n in range(ncycles):
+            with open(f"ensemble.{iter_n + 1}.pdb") as f:
+                of.write(f.read())
+    run(f"{bin_dir}/tmclust ensemble.pdb")
+
+    if os.path.isfile("CLUSTER_001.pdb"):
+        run("./qmodope_mainens CLUSTER_001.pdb")
+    else:
+        run("./qmodope_mainens ensemble.pdb")
+    shutil.move("best_qdope.pdb", "final_1.pdb")
+
+    for cn in range(2, 6):
+        if os.path.isfile(f"CLUSTER_00{cn}.pdb"):
+            run(f"./qmodope_mainens CLUSTER_00{cn}.pdb")
+            shutil.move("best_qdope.pdb", f"final_{cn}.pdb")
+
 # Sample constraints and generate a single model with CNS
-def generate_model(output, bin_dir, target, iter_n):
-    write_hbond_constraints(output, "hbcontacts.current")
+def generate_model_cns(output, bin_dir, target, iter_n):
+    write_hbond_constraints(output, "hbcontacts.current", topomin="random", minprob="random")
     run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl")
     run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl")
 
-    write_contact_constraints(output, "contacts.current")
+    write_contact_constraints(output, "contacts.current", pthresh="random")
     run(f"{bin_dir}/contact2noe {target}.fasta contacts.current > contact.tbl")
 
     run(f"{cns_cmd} < dgsa.inp > dgsa.log")
@@ -242,6 +267,9 @@ def aln_to_model_cns(aln_filepath, out_dir):
     cnsfile_dir  = os.path.join(dmpfold_dir, "cnsfiles")
     modcheck_dir = os.path.join(dmpfold_dir, "modcheck")
 
+    for modcheck_file in modcheck_files:
+        os.symlink(f"{modcheck_dir}/{modcheck_file}", modcheck_file)
+
     with open(f"{target}.fasta", "w") as f:
         f.write(">SEQ\n")
         f.write(sequence + "\n")
@@ -249,9 +277,6 @@ def aln_to_model_cns(aln_filepath, out_dir):
 
     run(f"{cns_cmd} < {cnsfile_dir}/gseq.inp > gseq.log")
     run(f"{cns_cmd} < {cnsfile_dir}/extn.inp > extn.log")
-
-    for modcheck_file in modcheck_files:
-        os.symlink(f"{modcheck_dir}/{modcheck_file}", modcheck_file)
 
     output = aln_to_predictions(os.path.join(cwd, aln_filepath))
 
@@ -261,7 +286,7 @@ def aln_to_model_cns(aln_filepath, out_dir):
     write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, 1)
 
     for model_n in range(nmodels1):
-        generate_model(output, bin_dir, target, 0)
+        generate_model_cns(output, bin_dir, target, 0)
 
     run("./qmodope_mainens ensemble.1.pdb")
 
@@ -277,26 +302,11 @@ def aln_to_model_cns(aln_filepath, out_dir):
         write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, 1)
 
         for model_n in range(nmodels2):
-            generate_model(output, bin_dir, target, iter_n)
+            generate_model_cns(output, bin_dir, target, iter_n)
 
         run(f"./qmodope_mainens ensemble.{iter_n + 1}.pdb")
 
-    with open("ensemble.pdb", "w") as of:
-        for iter_n in range(ncycles):
-            with open(f"ensemble.{iter_n + 1}.pdb") as f:
-                of.write(f.read())
-    run(f"{bin_dir}/tmclust ensemble.pdb")
-
-    if os.path.isfile("CLUSTER_001.pdb"):
-        run("./qmodope_mainens CLUSTER_001.pdb")
-    else:
-        run("./qmodope_mainens ensemble.pdb")
-    shutil.move("best_qdope.pdb", "final_1.pdb")
-
-    for cn in range(2, 6):
-        if os.path.isfile(f"CLUSTER_00{cn}.pdb"):
-            run(f"./qmodope_mainens CLUSTER_00{cn}.pdb")
-            shutil.move("best_qdope.pdb", f"final_{cn}.pdb")
+    cluster_models(bin_dir, ncycles)
 
     for modcheck_file in modcheck_files:
         os.remove(modcheck_file)
