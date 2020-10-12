@@ -78,6 +78,7 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4):
     length = len(sequence)
     print("Sequence has", length, "residues:")
     print(sequence)
+    print()
     target = os.path.split(aln_filepath)[1].rsplit(".", 1)[0]
 
     if os.path.isdir(out_dir):
@@ -111,7 +112,13 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4):
 
     run(f"{xplor_bin_dir}/xplor < gt.inp > gen_templ.log")
 
+    print(f"Starting iteration 1 of {ncycles}")
+    print()
+
     output = aln_to_predictions(os.path.join(cwd, aln_filepath))
+
+    print("Neural network inference done, generating models")
+    print()
 
     write_contact_constraints(output, "contacts.current", pthresh=contactperc1)
 
@@ -127,12 +134,19 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4):
     generate_models_xplor(output, xplor_bin_dir, xplor_script_dir, ncpus, 0)
 
     run("./qmodope_mainens ensemble.1.pdb")
+    print()
 
     for iter_n in range(1, ncycles):
+        print(f"Starting iteration {iter_n + 1} of {ncycles}")
+        print()
+
         shutil.move("contacts.current", f"contacts.{iter_n}")
         shutil.move("hbcontacts.current", f"hbcontacts.{iter_n}")
 
         output = aln_to_predictions_iter(os.path.join(cwd, aln_filepath), "best_qdope.pdb")
+
+        print("Neural network inference done, generating models")
+        print()
 
         write_contact_constraints(output, "contacts.current", pthresh=contactperc2)
 
@@ -148,11 +162,15 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4):
         generate_models_xplor(output, xplor_bin_dir, xplor_script_dir, ncpus, iter_n)
 
         run(f"./qmodope_mainens ensemble.{iter_n + 1}.pdb")
+        print()
 
     for fp in glob(".xplorInput*"):
         os.remove(fp)
 
+    print("Clustering models")
+    print()
     cluster_models(bin_dir, ncycles)
+    print()
 
     for modcheck_file in modcheck_files:
         os.remove(modcheck_file)

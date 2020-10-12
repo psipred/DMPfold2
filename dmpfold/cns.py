@@ -83,7 +83,7 @@ def aln_to_model_cns(aln_filepath, out_dir):
     run(f"{cns_cmd} < {cnsfile_dir}/gseq.inp > gseq.log")
     run(f"{cns_cmd} < {cnsfile_dir}/extn.inp > extn.log")
 
-    print(f"Starting iteration 1 of {n_iters}")
+    print(f"Starting iteration 1 of {ncycles}")
     print()
 
     output = aln_to_predictions(os.path.join(cwd, aln_filepath))
@@ -126,6 +126,7 @@ def aln_to_model_cns(aln_filepath, out_dir):
         print()
 
     print("Clustering models")
+    print()
     cluster_models(bin_dir, ncycles)
     print()
 
