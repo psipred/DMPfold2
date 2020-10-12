@@ -7,8 +7,11 @@ Development code for DMPfold2 distribution (currently private).
 We have attempted to make DMPfold2 easier to install than DMPfold1, which had many more dependencies.
 
 1. Python 3.6 or later is required.
+
 2. Install [PyTorch](https://pytorch.org) as appropriate for your system. It is not necessary to have a GPU, though it is recommended if using the force-directed folding protocol (see below).
+
 3. Install [MODELLER](https://salilab.org/modeller), which is usually as simple as running `conda install -c salilab modeller` and modifying the license key.
+
 4. Install DMPfold2:
 ```bash
 git clone https://github.com/psipred/DMPfold2 # Enter GitHub username and password
@@ -16,7 +19,10 @@ cd DMPfold2
 pip install -e .
 ```
 [This will become `pip install dmpfold` on registering in PyPI.]
-5. Copy or symlink trained NN models to relevant place:
+
+This will automatically install NumPy, SciPy and PeptideBuilder if required, and will put the executable `dmpfold` on the path.
+
+5. Copy or symlink the trained NN models to relevant place:
 ```bash
 mkdir -p dmpfold/nn/multigram dmpfold/nn/multigram-iter # From DMPfold2 directory
 for i in {1..4}; do
@@ -28,22 +34,20 @@ done
 ```
 [This step will disappear once we work out the best way to upload the 120 MB network files to GitHub, which has a 100 MB file size limit.]
 
-This will automatically install NumPy, SciPy and PeptideBuilder if required, and will put the executable `dmpfold` on the path.
-
 The above steps are sufficient to predict distograms with DMPfold2 from a sequence alignment.
 To generate models, you will need to set up at least one of the following 3 approaches.
-[See the DMPfold2 paper for a comparison of the approaches.]
+See the DMPfold2 paper for a comparison of the approaches.
 
 ### CNS
 
-[CNS install instructions.]
+[CNS installation instructions.]
 
 It is assumed that the `cns_solve_env.sh` setup script has been run before `dmpfold` is called, and hence the `cns` command is available.
 You might want to put it in your bash profile.
 
 ### Xplor-NIH
 
-[Xplor-NIH install instructions.]
+[Xplor-NIH installation instructions.]
 
 When running DMPfold2, the `-x` flag should point to the Xplor-NIH `bin` directory and `-n` can be used to set the number of CPUs for model generation (default 4).
 
@@ -78,7 +82,7 @@ Residue-residue distances, hydrogen bonds and dihedral angles can be predicted u
 ```python
 from dmpfold import aln_to_predictions, write_predictions
 output = aln_to_predictions(aln_filepath) # Shape (1, 104, n_res, n_res)
-write_predictions(output, "out")
+write_predictions(output, "out") # Writes out.dist, out.hb, out.phi and out.psi
 ```
 You can also run structure prediction from within Python, for example:
 ```python
