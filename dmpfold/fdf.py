@@ -15,7 +15,7 @@ from modeller import *
 from modeller.automodel import *
 from modeller.scripts import complete_pdb
 
-from .networks import aln_to_predictions, aln_to_predictions_iter
+from .networks import n_bins, aln_to_predictions, aln_to_predictions_iter
 
 dev = "cuda" if torch.cuda.is_available() else "cpu" # Force-directed folding device
 
@@ -54,7 +54,6 @@ hb_prob_init, hb_prob_iter = 0.31, 0.17
 phi_prob_init, phi_prob_iter = 0.76, 0.66
 psi_prob_init, psi_prob_iter = 0.16, 0.71
 
-n_bins = 34
 dist_bin_centres = torch.tensor([3.75 + 0.5 * i for i in range(n_bins)], device=dev)
 sigmas = torch.tensor([gauss_sigma] * n_bins, device=dev)
 

@@ -9,6 +9,7 @@ import numpy as np
 from scipy.spatial.distance import pdist, squareform
 
 NUM_CHANNELS = 442
+n_bins = 34
 
 class Maxout2d(nn.Module):
     def __init__(self, in_channels, out_channels, pool_size, kernel_size=1, dilation=1, block=0):

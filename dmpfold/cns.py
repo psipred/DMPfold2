@@ -10,7 +10,7 @@ from operator import itemgetter
 import torch
 import numpy as np
 
-from .networks import aln_to_predictions, aln_to_predictions_iter
+from .networks import n_bins, aln_to_predictions, aln_to_predictions_iter
 from .fdf import one_to_three_aas
 
 ncycles = 2 # Number of cycles
@@ -22,7 +22,6 @@ psiprob1 = 0.98
 phiprob2 = 0.88
 psiprob2 = 0.98
 
-n_bins = 34
 modcheck_files = ("dope.scr", "qmodcheck", "qmodope_mainens", "modcheckpot.dat")
 cns_cmd = "cns"
 
