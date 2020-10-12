@@ -132,6 +132,7 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4):
     run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl")
 
     generate_models_xplor(output, xplor_bin_dir, xplor_script_dir, ncpus, 0)
+    print()
 
     run("./qmodope_mainens ensemble.1.pdb")
     print()
@@ -160,6 +161,7 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4):
         run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl")
 
         generate_models_xplor(output, xplor_bin_dir, xplor_script_dir, ncpus, iter_n)
+        print()
 
         run(f"./qmodope_mainens ensemble.{iter_n + 1}.pdb")
         print()

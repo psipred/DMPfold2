@@ -1,0 +1,85 @@
+remarks  file  nmr/generate_template.inp
+remarks  Generates a "template" coordinate set.  This produces
+remarks  an arbitrary extended conformation with ideal geometry.
+remarks  Author: Axel T. Brunger
+remarks Modifications for DMPfold by Shaun Kandathil, 2020 
+
+set
+	seed=__XPLORSEED__
+end
+
+{====>} 
+structure @input.psf end                             {*Read structure file.*}
+
+parameter  
+{====>} 
+    @TOPPAR:protein.par                         {*SMK default param set bad*}
+end
+
+! SMK deletes S-S bonds if present. Obv in our use case this doesn't happen
+!topology 
+!   presidue NDIS                
+!      delete bond 1SG 2SG
+!      delete angle 1CB 1SG 2SG
+!      delete angle 1SG 2SG 2CB
+!   end
+!end
+
+{====>}
+                {*If protein contains S-S bridges, appropriately modify and*}
+                {*then uncomment the following lines.                      *}  
+!patch ndis reference=1=( residue 5  ) reference=2=( residue 55 ) end
+!patch ndis reference=1=( residue 14 ) reference=2=( residue 38 ) end
+!patch ndis reference=1=( residue 30 ) reference=2=( residue 51 ) end
+
+vector ident (x) ( all )
+vector do (x=x/10.) ( all )
+vector do (y=random(0.5) ) ( all )
+vector do (z=random(0.5) ) ( all )
+
+vector do (fbeta=50) (all)                 {*Friction coefficient, in 1/ps.*}
+vector do (mass=100) (all)                         {*Heavy masses, in amus.*}
+
+parameter 
+   nbonds
+      cutnb=5.5 rcon=20. nbxmod=-2 repel=0.9  wmin=0.1 tolerance=1.
+      rexp=2 irexp=2 inhibit=0.25
+   end       
+end 
+
+flags exclude * include bond angle vdw end
+
+minimize powell nstep=50  nprint=10 end
+
+flags include impr end
+
+minimize powell nstep=50 nprint=10 end
+
+dynamics  verlet
+   nstep=50  timestep=0.001 iasvel=maxwell  firsttemp= 300.  
+   tcoupling = true  tbath = 300.   nprint=50  iprfrq=0  
+end
+
+parameter 
+   nbonds
+      rcon=2. nbxmod=-3 repel=0.75
+   end
+end
+
+minimize powell nstep=100 nprint=25 end 
+
+dynamics  verlet
+   nstep=500  timestep=0.005 iasvel=maxwell  firsttemp= 300.  
+   tcoupling = true  tbath = 300.   nprint=100  iprfrq=0  
+end
+
+flags exclude vdw elec end
+vector do (mass=1.) ( name h* ) 
+hbuild selection=( name h* ) phistep=360 end
+flags include vdw elec end
+
+minimize powell nstep=200 nprint=50 end
+                                                       {*Write coordinates.*}
+write coordinates output=extended.pdb end  
+
+stop

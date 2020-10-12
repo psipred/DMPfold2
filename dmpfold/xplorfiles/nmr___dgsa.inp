@@ -1,0 +1,385 @@
+remarks file nmr/dgsa.inp  -- Simulated annealing regularization 
+remarks                       and refinement for embedded distance 
+remarks                       geometry structures or substructures. 
+remarks  Authors: Michael Nilges, John Kuszewski, and Axel T. Brunger
+remarks Modifications for DMPfold by Shaun Kandathil, 2020 
+
+set
+   seed=__XPLORSEED__
+end
+
+eval ($numStructs = __NMODELS__) !total number of structures to calculate
+eval ($randomSeed = __XPLORSEED__)     !random seed
+eval ($use_graphics = false) ! VMD-xplor graphics are not used.
+
+!
+! get parallel info
+!
+cpyth "from os import environ as env"
+cpyth "xplor.command('eval ($proc_num=%s)'  % env['XPLOR_PROCESS']      )"
+cpyth "xplor.command('eval ($num_procs=%s)' % env['XPLOR_NUM_PROCESSES'])"
+eval ($num_procs=min($num_procs,$numStructs))
+
+! shouldn't have a process rank higher than $numprocs...
+if ( $proc_num >= $num_procs ) then stop end if 
+
+eval ($firstStruct = int($proc_num * $numStructs / $num_procs))
+eval ($lastStruct  = int(($proc_num+1)  * $numStructs / $num_procs))
+
+{====>}
+evaluate ($init_t = 2000)            {*Initial annealing temperature, in K.*}
+{====>}
+evaluate ($high_steps = 1000 )        {*Total number of steps at high temp.*}
+{====>}
+evaluate ($cool_steps = 1000 )         {*Total number of steps for cooling.*}
+
+evaluate ($trj = 0) {* SMK 1 if you want to print trajectory files *}
+
+if ($trj = 1) then
+   evaluate ($nsavc_trj1 = 10)
+   evaluate ($nsavc_trj2 = 1)
+else
+   evaluate ($nsavc_trj1 = 0)
+   evaluate ($nsavc_trj2 = 0)
+end if
+
+parameter                                        {*Read the parameter file.*}
+{====>} 
+    @TOPPAR:protein.par 
+end
+
+{*SMK par patch to include explicit Hbonds and energies?*}
+
+{====>} 
+structure @input.psf end                         {*Read the structure file.*}
+
+noe
+{====>}                                                        
+   nres=__NNOE__
+                         {*Estimate greater than the actual number of NOEs.*}
+   class all 
+{====>}
+   @contact.tbl                           {*Read NOE distance ranges.*}
+   @ssnoe.tbl
+   @hbond.tbl ! SMK try excluding these?
+end
+
+{====>}
+restraints dihedral
+	   nassign=__NDIH__
+	   @dihedral.tbl                  {*Read dihedral angle restraints.*}
+end
+
+vector do (fbeta=10) (all) {*Friction coefficient for MD heatbath, in 1/ps.*}
+vector do (mass=100) (all)              {*Uniform heavy masses to speed MD.*}
+
+noe                             {*Parameters for NOE effective energy term.*}
+   ceiling=1000                      
+   averaging  * cent
+   potential  * softsquare	!SMK
+   sqconstant * 1.
+   sqexponent * 2
+   asymptote  * 1.0	!SMK
+   soexponent * 2	!SMK
+   rswitch    * 0.25	!SMK
+   scale      * 25.     !SMK  {*Constant NOE scale throughout the protocol.*}
+end
+
+parameter                       {*Parameters for the repulsive energy term.*}
+   nbonds
+      repel=0.5                  {*Initial value for repel--modified later.*}
+      rexp=2 irexp=2 rcon=1.
+      nbxmod=-2                 {*Initial value for nbxmod--modified later.*}
+      wmin=0.01 
+      cutnb=4.5 ctonnb=2.99 ctofnb=3. 
+      tolerance=0.5 
+   end
+end
+
+restraints dihedral 
+      scale=7.	                          {*Initial weight--modified later.*}
+      
+end
+
+{====>}
+evaluate ($end_count=__NMODELS__)
+          {*Loop through a family of __NMODELS__ structures.*}
+
+eval ($count = $firstStruct)
+while ($count < $lastStruct) loop main
+    
+    eval ($seed = $randomSeed+$count)
+    set seed $seed end
+
+      
+{====>}                             {*Filename(s) for embedded coordinates.*}
+   evaluate ($filename="dg_sub_embed_"+encode($count)+".pdb")
+!   evaluate ($filename="dg_full_embed_"+encode($count)+".pdb")
+      
+                             {*Test for the correct enantiomer;            *}
+{====>}                      {*if you want to bypass this test because the *}
+                             {*substructures were tested previously, simply*}
+                             {*remove the -1 from the next statement.      *}
+for $image in ( 1 -1 ) loop imag
+      coor initialize end
+      coor @@$filename 
+      vector do (x=x * $image) ( known )
+      vector identity (store1) (not known)        {*Set store1 to unknowns.*}
+	     
+     {* ================== Create local ideal geometry by template fitting;*}
+     {*                    this also takes care of unknown atoms.          *}
+	   
+      set message=off echo=off end
+      coor copy end          {*Store current coordinates in comparison set.*}
+      
+{====>}                 {*The user has to supply a template coordinate set.*} 
+      coor @@extended.pdb  
+	          
+      for $id in id ( tag ) loop fit              {*Loop over residue tags.*}  
+		  
+         coordinates                 {*LSQ fitting using known coordinates.*}
+            fit select = ( byresidue (id $id) and not store1 )
+         end
+		      {*Store fitted template coordinates for this residue.*}
+        coor copy selection=( byresidue (id $id) ) end
+      
+      end loop fit
+	    
+      coor swap end
+      set message=on echo=on end
+      
+    {* ============================= Minimization of bonds, VDWs, and NOEs.*}
+    {* SMK I suspect that much of the topology gets set up here. *}
+      restraints dihedral   scale=7.   end 
+      parameter  nbonds   nbxmod=-2 repel=0.5   end  end 
+      flags exclude * include bond vdw noe cdih end
+      constraints interaction (all) (all) weights * 1.  vdw 20. end end
+      
+!      write coordinates output ="pre-bond-vdw-noe.pdb" end      	
+      minimize powell nstep=100 nprint=10 end
+!      write coordinates output ="post-bond-vdw-noe.pdb" end      
+     {* ================================================== Include angles. *}
+      
+      flags include angl end
+
+      minimize powell nstep=100 nprint=10 end
+!      write coordinates output ="post-angles.pdb" end            
+
+     {* ============ Dynamics, slowly introducing chirality and planarity. *}
+     {*SMK output some traj files so I can see what's going on*}
+      evaluate ($trjbasename="dgsa_trj_"+encode($image)+"_"+encode($count))
+
+      flags include impr end 
+
+      evaluate ($nstep1 = int($high_steps/8))
+      evaluate ($nstep2 = int($high_steps/2))
+
+      constraints inter (all) (all) weights * 0.1 impr 0.05 vdw 20. end end
+      evaluate ($mdloop=int(1))
+      if ($trj=1) then
+         evaluate ($trjname=$trjbasename+"."+encode($mdloop)+".dcd")
+      else
+         evaluate ($trjname="")
+      end if
+      
+      dynamics  verlet
+         nstep=$nstep1 time=0.003 iasvel=maxwell firstt=$init_t 
+         tcoup=true tbath=$init_t nprint=100 iprfrq=0                     
+	 traj=$trjname nsavc=$nsavc_trj1
+      end 
+      
+      evaluate ($mdloop=$mdloop+1)
+      
+      if ($trj=1) then
+      	 evaluate ($trjname=$trjbasename+"."+encode($mdloop)+".dcd")
+      end if
+      
+      constraints inter (all) (all) weights * 0.2 impr 0.1  vdw 20. end end
+      dynamics  verlet
+         nstep=$nstep1 time=0.003 iasvel=current firstt=$init_t 
+         tcoup=true tbath=$init_t nprint=100 iprfrq=0 
+	 traj=$trjname nsavc=$nsavc_trj1      
+      end 
+
+      evaluate ($mdloop=$mdloop+1)
+      if ($trj=1) then
+      	 evaluate ($trjname=$trjbasename+"."+encode($mdloop)+".dcd")
+      end if
+
+      parameter  nbonds repel=0.9   end  end 
+      constraints inter (all) (all) weights * 0.2 impr 0.2 vdw 0.01 end end
+      dynamics  verlet
+         nstep=$nstep1 time=0.003 iasvel=current firstt=$init_t       
+         tcoup=true tbath=$init_t nprint=100 iprfrq=0
+         traj=$trjname nsavc=$nsavc_trj1
+      end 
+
+      evaluate ($mdloop=$mdloop+1)
+      if ($trj=1) then
+      	 evaluate ($trjname=$trjbasename+"."+encode($mdloop)+".dcd")
+      end if
+
+      parameter nbonds nbxmod=-3  end  end 
+      constraints inter (all) (all) weights * 0.4 impr 0.4 vdw 0.003 end end
+      dynamics  verlet
+         nstep=$nstep2 time=0.003 iasvel=current firstt=$init_t       
+         tcoup=true tbath=$init_t nprint=100 iprfrq=0 
+         traj=$trjname nsavc=$nsavc_trj1                
+      end 
+
+      evaluate ($mdloop=$mdloop+1)
+      if ($trj=1) then
+      	 evaluate ($trjname=$trjbasename+"."+encode($mdloop)+".dcd")
+      end if
+
+      constraints inter (all) (all) weights * 1.0 impr 1.0 vdw 0.003 end end
+      dynamics  verlet
+         nstep=$nstep1 time=0.003 iasvel=current  firstt=$init_t       
+         tcoup=true tbath=$init_t nprint=100 iprfrq=0
+         traj=$trjname nsavc=$nsavc_trj1
+      end 
+
+      {*SMK added phase with hbond energy term added*}
+!      evaluate ($mdloop=$mdloop+1)
+!      evaluate ($trjname=$trjbasename+"."+encode($mdloop)+".dcd")
+!      flags include hbon end
+!      constraints inter (all) (all) weights * 1.0 impr 1.0 vdw 0.003 hbon 0.5 end end
+!      dynamics  verlet
+!         nstep=$nstep1 time=0.003 iasvel=current  firstt=$init_t       
+!         tcoup=true tbath=$init_t nprint=100 iprfrq=0
+!	  traj=$trjname nsavc=$nsavc_trj1
+!      end 
+
+      if ($image = 1) then
+         vector do (store7=x) ( all )        {*Store first image in stores.*}
+         vector do (store8=y) ( all )
+         vector do (store9=z) ( all )
+         vector do (store4=vx) ( all )
+         vector do (store5=vy) ( all )
+         vector do (store6=vz) ( all )
+      end if
+
+   end loop imag 
+      
+   {* ================== Establish the correct handedness of the structure.*}
+      
+   energy end
+   evaluate ($e_minus=$ener) 
+   coor copy end
+   vector do (x=store7) ( all )
+   vector do (y=store8) ( all )
+   vector do (z=store9) ( all )
+   energy end
+   evaluate ($e_plus=$ener) 
+   if ( $e_plus > $e_minus ) then
+      evaluate ($hand=-1 )
+      coor swap end
+   else
+      evaluate ($hand= 1 )
+      vector do (vx=store4) ( all )
+      vector do (vy=store5) ( all )
+      vector do (vz=store6) ( all )
+   end if
+      
+      
+      {* =============================== Increase VDW interaction and cool.*}
+
+   restraints dihedral   scale=50.   end
+
+   evaluate ($final_t = 100)     { K }
+   evaluate ($tempstep = 50)     { K }
+
+   evaluate ($ncycle = ($init_t-$final_t)/$tempstep)
+   evaluate ($nstep = int($cool_steps/$ncycle))
+
+   ! SMK these radii are different between CNS and Xplor;
+   !   fin_rad was an order of magnitude off(!?)
+   !   evaluate ($ini_rad  = 0.9)        evaluate ($fin_rad  = 0.075)
+   evaluate ($ini_rad  = 1.0)        evaluate ($fin_rad  = 0.85)
+   evaluate ($ini_con=  0.003)       evaluate ($fin_con=  4.0)
+
+   evaluate ($bath  = $init_t)
+   evaluate ($k_vdw = $ini_con)
+   evaluate ($k_vdwfact = ($fin_con/$ini_con)^(1/$ncycle))
+   evaluate ($radius=    $ini_rad)
+   evaluate ($radfact = ($fin_rad/$ini_rad)^(1/$ncycle))
+
+   evaluate ($i_cool = 0)
+   while ($i_cool < $ncycle) loop cool
+      evaluate ($i_cool=$i_cool+1)
+      
+      evaluate ($bath  = $bath  - $tempstep)
+      evaluate ($k_vdw=min($fin_con,$k_vdw*$k_vdwfact))
+      evaluate ($radius=max($fin_rad,$radius*$radfact))
+      if ($trj=1) then 
+         evaluate ($trjname=$trjbasename+".cool."+encode($i_cool)+".dcd")
+      end if
+      parameter  nbonds repel=$radius   end end 
+! SMK this line differs between CNS and Xplor
+      constraints interaction (all) (all) weights * 1. vdw $k_vdw end end
+
+      dynamics  verlet
+         nstep=$nstep time=0.001 iasvel=current firstt=$bath 
+         tcoup=true tbath=$bath nprint=$nstep iprfrq=0
+         traj=$trjname nsavc=$nsavc_trj2
+      end
+      
+{====>}                                                  {*Abort condition.*}
+      evaluate ($critical=$temp/$bath)
+      if ($critical >  10. ) then
+         display  **** WARNING: equilibration incomplete... 
+	 display                check value of `critical` and maybe rerun job 
+	 display                with smaller timestep.
+         ! stop  SMK just continue for now. Timestep already reduced to 0.001; default was 0.003...
+      end if
+
+   end loop cool
+      
+   {* ================================================= Final minimization.*}
+   
+
+   {*SMK added these scale factors and loop pmini to match CNS protocol*}
+   restraints dihedral scale=300 end
+   noe scale * 10. end
+   evaluate ($count_pmini=0)
+   evaluate ($total_pmini=10)
+   evaluate ($nstep_pmini=15000)
+   evaluate ($nprint_pmini=int($nstep_pmini/8))
+   while ($count_pmini < $total_pmini) loop pmini
+      minimize powell nstep=$nstep_pmini nprint=$nprint_pmini drop=10.0 end
+      evaluate ($count_pmini=$count_pmini + 1)
+   end loop pmini
+   
+   {* ====================== Analyze and write out the final structure(s).*}
+   print threshold=0.5 noe 
+   evaluate ($rms_noe=$result)
+   evaluate ($violations_noe=$violations)
+   print threshold=5. cdih
+   evaluate ($rms_cdih=$result)
+   evaluate ($violations_cdih=$violations)
+   print thres=0.05 bonds          
+   evaluate ($rms_bonds=$result)
+   print thres=5. angles
+   evaluate ($rms_angles=$result)
+   print thres=5. impropers
+   evaluate ($rms_impropers=$result)
+   remarks =============================================================== 
+   remarks            overall,bonds,angles,improper,vdw,noe,cdih
+   remarks energies: $ener, $bond, $angl, $impr, $vdw, $noe, $cdih 
+   remarks =============================================================== 
+   remarks            bonds,angles,impropers,noe,cdih
+   remarks rms-d: $rms_bonds,$rms_angles,$rms_impropers,$rms_noe,$rms_cdih
+   remarks =============================================================== 
+   remarks               noe,  cdih
+   remarks violations.: $violations_noe, $violations_cdih
+   remarks =============================================================== 
+   remarks handedness: $hand, enantiomer discrimination ( $e_plus : $e_minus )
+      
+{====>}                        {*Name(s) of the family of final structures.*}
+    evaluate ($filename="dgsa_"+encode($count)+".pdb")
+      
+   write coordinates output =$filename end
+   evaluate ($count=$count+1)    
+end loop main
+
+stop
