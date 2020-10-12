@@ -56,6 +56,7 @@ def aln_to_model_cns(aln_filepath, out_dir):
     length = len(sequence)
     print("Sequence has", length, "residues:")
     print(sequence)
+    print()
     target = os.path.split(aln_filepath)[1].rsplit(".", 1)[0]
 
     if os.path.isdir(out_dir):
@@ -82,7 +83,13 @@ def aln_to_model_cns(aln_filepath, out_dir):
     run(f"{cns_cmd} < {cnsfile_dir}/gseq.inp > gseq.log")
     run(f"{cns_cmd} < {cnsfile_dir}/extn.inp > extn.log")
 
+    print(f"Starting iteration 1 of {n_iters}")
+    print()
+
     output = aln_to_predictions(os.path.join(cwd, aln_filepath))
+
+    print("Neural network inference done, generating models")
+    print()
 
     write_dihedral_constraints(output, "dihedral.tbl", "phi", phiprob1)
     write_dihedral_constraints(output, "dihedral.tbl", "psi", psiprob1)
@@ -93,12 +100,19 @@ def aln_to_model_cns(aln_filepath, out_dir):
         generate_model_cns(output, bin_dir, target, 0)
 
     run("./qmodope_mainens ensemble.1.pdb")
+    print()
 
     for iter_n in range(1, ncycles):
+        print(f"Starting iteration {iter_n + 1} of {ncycles}")
+        print()
+
         shutil.move("contacts.current", f"contacts.{iter_n}")
         shutil.move("hbcontacts.current", f"hbcontacts.{iter_n}")
 
         output = aln_to_predictions_iter(os.path.join(cwd, aln_filepath), "best_qdope.pdb")
+
+        print("Neural network inference done, generating models")
+        print()
 
         write_dihedral_constraints(output, "dihedral.tbl", "phi", phiprob2)
         write_dihedral_constraints(output, "dihedral.tbl", "psi", psiprob2)
@@ -109,8 +123,11 @@ def aln_to_model_cns(aln_filepath, out_dir):
             generate_model_cns(output, bin_dir, target, iter_n)
 
         run(f"./qmodope_mainens ensemble.{iter_n + 1}.pdb")
+        print()
 
+    print("Clustering models")
     cluster_models(bin_dir, ncycles)
+    print()
 
     for modcheck_file in modcheck_files:
         os.remove(modcheck_file)

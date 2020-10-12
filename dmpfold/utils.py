@@ -9,6 +9,8 @@ from operator import itemgetter
 import torch
 import numpy as np
 
+from .networks import n_bins
+
 one_to_three_aas = {"C": "CYS", "D": "ASP", "S": "SER", "Q": "GLN", "K": "LYS",
                     "I": "ILE", "P": "PRO", "T": "THR", "F": "PHE", "N": "ASN",
                     "G": "GLY", "H": "HIS", "L": "LEU", "R": "ARG", "W": "TRP",

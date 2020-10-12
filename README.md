@@ -11,7 +11,7 @@ We have attempted to make DMPfold2 easier to install than DMPfold1, which had ma
 3. Install [MODELLER](https://salilab.org/modeller), which is usually as simple as running `conda install -c salilab modeller` and modifying the license key.
 4. To install DMPfold2, run:
 ```bash
-git clone https://github.com/psipred/DMPfold2
+git clone https://github.com/psipred/DMPfold2 # Enter GitHub username and password
 cd DMPfold2
 pip install -e .
 ```

@@ -467,8 +467,8 @@ def dihedral_constraints(output, iter_n):
 def modeller_fa_and_score(env, ali_fp, iter_n, output):
     n_res = output.size(2)
     dope_scores = []
-    print()
     print("Generating full atom models with MODELLER")
+    print()
     with open(os.devnull, "w") as f, redirect_stdout(f):
         for ti in range(n_trajs):
             a = automodel(env, alnfile=ali_fp, knowns=[f"traj_{ti + 1}"], sequence="target")
@@ -488,7 +488,6 @@ def modeller_fa_and_score(env, ali_fp, iter_n, output):
             score = atmsel.assess_dopehr()
             dope_scores.append(score)
 
-    print()
     print(f"Iteration {iter_n} MODELLER DOPE scores are:")
     for ti in range(n_trajs):
         print(f"{(ti + 1):<3}  {dope_scores[ti]:10.2f}")
@@ -517,6 +516,7 @@ def aln_to_model_fdf(aln_filepath, out_dir):
     length = len(sequence)
     print("Sequence has", length, "residues:")
     print(sequence)
+    print()
 
     if os.path.isdir(out_dir):
         print(f"Output directory {out_dir} already exists, exiting")
@@ -544,7 +544,6 @@ def aln_to_model_fdf(aln_filepath, out_dir):
             of.write(f"structureX:traj_{i + 1}:1:A:{length}:A:x:x:2.0:0.02\n")
             of.write(f"{sequence}*\n")
 
-    print()
     print(f"Starting iteration 1 of {n_iters}")
     print()
 
@@ -554,6 +553,7 @@ def aln_to_model_fdf(aln_filepath, out_dir):
     print()
     force_folder = ForceFolder(sequence, n_trajs, gaussian_weights(output),
                             hbond_constraints(output, hb_prob_init), dihedral_constraints(output, 1))
+    print()
     satisfaction_score = force_folder.fold(n_steps)
     force_folder.write_coords("traj")
     best_score = modeller_fa_and_score(env, ali_fp, 1, output)
@@ -569,6 +569,7 @@ def aln_to_model_fdf(aln_filepath, out_dir):
         print()
         force_folder = ForceFolder(sequence, n_trajs, gaussian_weights(output),
                         hbond_constraints(output, hb_prob_iter), dihedral_constraints(output, iter_n))
+        print()
         satisfaction_score = force_folder.fold(n_steps)
         force_folder.write_coords("traj")
         best_score = modeller_fa_and_score(env, ali_fp, iter_n, output)
