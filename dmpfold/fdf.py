@@ -362,7 +362,7 @@ class ForceFolder(torch.nn.Module):
             for atom in atoms:
                 if torch.isnan(self.coords[atom]).any():
                     print("Encountered a NaN value, exiting")
-                    sys.exit()
+                    sys.exit(1)
 
         # Return mean distogram satisfaction score
         return cb_energies.sum() / (self.min_cb_energy * self.n_trajs)
@@ -501,7 +501,7 @@ def modeller_fa_and_score(env, ali_fp, iter_n, output):
 
     if np.min(dope_scores) == 10_000.0:
         print("Could not produce a valid model, exiting")
-        sys.exit()
+        sys.exit(1)
 
     best_model_n = np.argmin(dope_scores) + 1
     shutil.copyfile(f"traj_{best_model_n}_fa.pdb", f"best_iter_{iter_n}.pdb")
@@ -525,7 +525,7 @@ def aln_to_model_fdf(aln_filepath, out_dir):
 
     if os.path.isdir(out_dir):
         print(f"Output directory {out_dir} already exists, exiting")
-        sys.exit()
+        sys.exit(1)
     else:
         cwd = os.getcwd()
         os.mkdir(out_dir)

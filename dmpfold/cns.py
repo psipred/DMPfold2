@@ -31,7 +31,7 @@ def run(cmd):
     proc = subprocess.run(cmd, shell=True)
     if proc.returncode != 0:
         print(f"Command `{cmd}` gave return code {proc.returncode}, exiting")
-        sys.exit()
+        sys.exit(1)
 
 # Write sequence file for CNS
 def write_seq_file(in_file, out_file):
@@ -231,7 +231,7 @@ def aln_to_model_cns(aln_filepath, out_dir):
 
     if os.path.isdir(out_dir):
         print(f"Output directory {out_dir} already exists, exiting")
-        sys.exit()
+        sys.exit(1)
     else:
         cwd = os.getcwd()
         os.mkdir(out_dir)
