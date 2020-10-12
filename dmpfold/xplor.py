@@ -1,8 +1,10 @@
 import sys
 import os
+import shutil
 from datetime import datetime
 from glob import glob
 
+from .networks import aln_to_predictions, aln_to_predictions_iter
 from .cns import modcheck_files, run, random_seed, write_hbond_constraints,
                     write_contact_constraints, order_pdb_file, cluster_models
 
@@ -64,7 +66,7 @@ def generate_models_xplor(output, xplor_bin_dir, xplor_script_dir, ncpus, iter_n
         for fp in glob("dgsa_[0-9]*.pdb"):
             for line in order_pdb_file(fp):
                 of.write(line)
-        of.write("END\n")
+            of.write("END\n")
 
 # Protein structure prediction with Xplor-NIH
 def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4):
