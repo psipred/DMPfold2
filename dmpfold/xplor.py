@@ -8,7 +8,7 @@ from .networks import aln_to_predictions, aln_to_predictions_iter
 from .utils import *
 
 ncycles = 2 # Number of cycles
-nmodels = 10 # Number of models
+nmodels = 20 # Number of models
 
 contactperc1 = 0.47
 contactperc2 = 0.59

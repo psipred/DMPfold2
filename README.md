@@ -68,7 +68,7 @@ dmpfold -i prot.aln -o out_dir -p xplor -x ~/xplor-nih-3.1/bin # Xplor-NIH proto
 
 dmpfold -i prot.aln -o out_dir -p fdf # Force-directed folding protocol
 ```
-where `out_dir` is the output directory to write results to (which will be created).
+`out_dir` is the output directory to write results to, which will be created.
 
 ### Getting sequence alignments
 

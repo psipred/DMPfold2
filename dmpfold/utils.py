@@ -29,7 +29,7 @@ def run(cmd):
 def random_seed():
     return randrange(0, 32768)
 
-# Write sequence file for CNS
+# Write sequence file for
 def write_seq_file(in_file, out_file):
     seq = ""
     with open(in_file) as f:
@@ -44,7 +44,7 @@ def write_seq_file(in_file, out_file):
             else:
                 of.write(" ")
 
-# Append dihedral CNS constraints to a file
+# Append dihedral constraints to a file
 def write_dihedral_constraints(output, out_file, angle, prob):
     n_res = output.size(2)
     for wi in range(n_res - 1):
@@ -94,7 +94,7 @@ def dihedral_bins_to_constraints(fields, pthresh):
     meets_threshold = psum > pthresh
     return ang, sdev, meets_threshold
 
-# Write hydrogen bond CNS constraints to a file
+# Write hydrogen bond constraints to a file
 def write_hbond_constraints(output, out_file, topomin, minprob):
     if topomin == "random":
         topomin = randrange(0, 6) + 2
@@ -110,7 +110,7 @@ def write_hbond_constraints(output, out_file, topomin, minprob):
                     if score > minprob:
                         of.write(f"{wi + 1} {wj + 1} 0 3.5 {score}\n")
 
-# Write contact CNS constraints to a file
+# Write contact constraints to a file
 def write_contact_constraints(output, out_file, pthresh):
     if pthresh == "random":
         pthresh = random() * 0.6 + 0.3
