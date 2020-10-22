@@ -13,7 +13,7 @@ parser.add_argument("-p", "--protocol", choices=["fdf", "cns", "xplor"], require
     help="the method for generating models from predicted constraints")
 parser.add_argument("-x", "--xplorbindir", default="~/xplor-nih-3.1/bin",
     help="the path to the Xplor-NIH bin directory (xplor protocol only)")
-parser.add_argument("-n", "--xplorncpus", default=4,
+parser.add_argument("-n", "--xplorncpus", type=int, default=4,
     help="the number of CPUs to use for Xplor-NIH model generation (xplor protocol only)")
 
 args = parser.parse_args()
