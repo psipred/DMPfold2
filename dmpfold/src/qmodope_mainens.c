@@ -294,8 +294,8 @@ int main(int argc, char **argv)
 
 	pclose(dfp);
 
-	sprintf(cmdstr, "qmodcheck qmod_temp.pdb | tail -1 > qmod.tmp");
-//	sprintf(cmdstr, "qmodcheck qmod_temp.pdb A | tail -1");
+	sprintf(cmdstr, "./qmodcheck qmod_temp.pdb | tail -1 > qmod.tmp"); // Modified by Joe to add "./"
+//	sprintf(cmdstr, "./qmodcheck qmod_temp.pdb A | tail -1");
 	
 	ret = system(cmdstr);
 
