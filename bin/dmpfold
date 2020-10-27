@@ -9,8 +9,10 @@ parser.add_argument("-i", "--input", required=True,
     help="the target sequence and sequence alignment in aln format")
 parser.add_argument("-o", "--output", required=True,
     help="the output directory to be created")
-parser.add_argument("-p", "--protocol", choices=["fdf", "cns", "xplor"], required=True,
+parser.add_argument("-p", "--protocol", choices=["fdf", "cns", "cns-sr", "xplor"], required=True,
     help="the method for generating models from predicted constraints")
+parser.add_argument("-r", "--relaxcmd", default="relax.static.linuxgccrelease",
+    help="the command to run Rosetta relax")
 parser.add_argument("-x", "--xplorbindir", default="~/xplor-nih-3.1/bin",
     help="the path to the Xplor-NIH bin directory (xplor protocol only)")
 parser.add_argument("-n", "--xplorncpus", type=int, default=4,
@@ -22,5 +24,7 @@ if args.protocol == "fdf":
     aln_to_model_fdf(args.input, args.output)
 elif args.protocol == "cns":
     aln_to_model_cns(args.input, args.output)
+elif args.protocol == "cns-sr":
+    aln_to_model_cns(args.input, args.output, relax=True, relaxcmd=args.relaxcmd)
 elif args.protocol == "xplor":
     aln_to_model_xplor(args.input, args.output, args.xplorbindir, args.xplorncpus)

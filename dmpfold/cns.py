@@ -6,9 +6,10 @@ from datetime import datetime
 from .networks import aln_to_predictions, aln_to_predictions_iter
 from .utils import *
 
-ncycles = 2 # Number of cycles
-nmodels1 = 100 # Number of models in first cycle
-nmodels2 = 20 # Number of models in subsequence cycles
+ncycles_norelax = 2   # Number of cycles
+ncycles_relax   = 10  # Number of cycles for sample relax protocol
+nmodels1        = 100 # Number of models in first cycle
+nmodels2        = 20  # Number of models in subsequence cycles
 
 phiprob1 = 0.88
 psiprob1 = 0.98
@@ -46,7 +47,7 @@ def generate_model_cns(output, bin_dir, target, iter_n):
     os.remove(f"{target}_sub_embed_1.pdb")
 
 # Protein structure prediction with CNS
-def aln_to_model_cns(aln_filepath, out_dir):
+def aln_to_model_cns(aln_filepath, out_dir, relax=False, relaxcmd="relax.static.linuxgccrelease"):
     start_time = datetime.now()
     print("Predicting structure from the alignment in", aln_filepath)
 
@@ -83,6 +84,7 @@ def aln_to_model_cns(aln_filepath, out_dir):
     run(f"{cns_cmd} < {cnsfile_dir}/gseq.inp > gseq.log")
     run(f"{cns_cmd} < {cnsfile_dir}/extn.inp > extn.log")
 
+    ncycles = ncycles_relax if relax else ncycles_norelax
     print(f"Starting iteration 1 of {ncycles}")
     print()
 
@@ -109,7 +111,22 @@ def aln_to_model_cns(aln_filepath, out_dir):
         shutil.move("contacts.current", f"contacts.{iter_n}")
         shutil.move("hbcontacts.current", f"hbcontacts.{iter_n}")
 
-        output = aln_to_predictions_iter(os.path.join(cwd, aln_filepath), "best_qdope.pdb")
+        if relax:
+            if iter_n >= 2:
+                run(f"{relaxcmd} -overwrite -in:file:s best_qdope.pdb")
+            else:
+                shutil.copyfile("best_qdope.pdb", "best_qdope_0001.pdb")
+
+            with open("best_qdope_0001.pdb") as f, open("ref.pdb", "w") as of:
+                for line in f:
+                    if line.startswith("ATOM"):
+                        of.write(line)
+                of.write("END\n")
+            os.remove("best_qdope_0001.pdb")
+
+            output = aln_to_predictions_iter(os.path.join(cwd, aln_filepath), "ref.pdb")
+        else:
+            output = aln_to_predictions_iter(os.path.join(cwd, aln_filepath), "best_qdope.pdb")
 
         print("Neural network inference done, generating models")
         print()
