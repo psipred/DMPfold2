@@ -18,22 +18,18 @@ parser.add_argument("-n1", "--nmodels1", type=int, default=-1,
 parser.add_argument("-n2", "--nmodels2", type=int, default=-1,
     help="the number of models generated for subsequent iterations, default depends on protocol")
 parser.add_argument("-r", "--relaxcmd", default="relax.static.linuxgccrelease",
-    help="the command to run Rosetta relax")
+    help="the command to run Rosetta relax, default \"relax.static.linuxgccrelease\" (relax protocols only)")
 parser.add_argument("-x", "--xplorbindir", default="~/xplor-nih-3.1/bin",
-    help="the path to the Xplor-NIH bin directory (xplor protocol only)")
+    help="the path to the Xplor-NIH bin directory, default \"~/xplor-nih-3.1/bin\" (xplor protocols only)")
 parser.add_argument("-n", "--xplorncpus", type=int, default=4,
-    help="the number of CPUs to use for Xplor-NIH model generation (xplor protocol only)")
+    help="the number of CPUs to use for Xplor-NIH model generation, default 4 (xplor protocols only)")
 
 args = parser.parse_args()
 
-if args.ncycles < 1:
-    raise argparse.ArgumentTypeError("ncycles must be a positive integer")
-if args.nmodels1 < 1:
-    raise argparse.ArgumentTypeError("nmodels1 must be a positive integer")
-if args.nmodels2 < 1:
-    raise argparse.ArgumentTypeError("nmodels2 must be a positive integer")
-if args.xplorncpus < 1:
-    raise argparse.ArgumentTypeError("xplorncpus must be a positive integer")
+for arg_name, arg_val in (("ncycles" , args.ncycles ), ("nmodels1"  , args.nmodels1  ),
+                          ("nmodels2", args.nmodels2), ("xplorncpus", args.xplorncpus)):
+    if arg_val != -1 and arg_val < 1:
+        raise argparse.ArgumentTypeError(f"{arg_name} must be a positive integer")
 
 if args.protocol == "fdf":
     aln_to_model_fdf(args.input, args.output, ncycles=args.ncycles,
