@@ -7,9 +7,6 @@ from glob import glob
 from .networks import aln_to_predictions, aln_to_predictions_iter
 from .utils import *
 
-ncycles = 2 # Number of cycles
-nmodels = 20 # Number of models
-
 contactperc1 = 0.47
 contactperc2 = 0.59
 hbprob1 = 0.49
@@ -25,7 +22,7 @@ xn_mmdgscale = 100.0
 xn_mmdgexp = 2
 
 # Generate models with Xplor-NIH
-def generate_models_xplor(output, xplor_bin_dir, xplor_script_dir, ncpus, iter_n):
+def generate_models_xplor(output, xplor_bin_dir, xplor_script_dir, ncpus, iter_n, nmodels):
     nnoe = 1
     for fp in ("contact.tbl", "hbond.tbl", "ssnoe.tbl"):
         with open(fp) as f:
@@ -68,7 +65,15 @@ def generate_models_xplor(output, xplor_bin_dir, xplor_script_dir, ncpus, iter_n
             of.write("END\n")
 
 # Protein structure prediction with Xplor-NIH
-def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4):
+def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4,
+                        ncycles=-1, nmodels1=-1, nmodels2=-1):
+    if ncycles == -1:
+        ncycles = 2
+    if nmodels1 == -1:
+        nmodels1 = 20
+    if nmodels2 == -1:
+        nmodels2 = 20
+
     start_time = datetime.now()
     print("Predicting structure from the alignment in", aln_filepath)
 
@@ -131,7 +136,7 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4):
     run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl")
     run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl")
 
-    generate_models_xplor(output, xplor_bin_dir, xplor_script_dir, ncpus, 0)
+    generate_models_xplor(output, xplor_bin_dir, xplor_script_dir, ncpus, 0, nmodels1)
     print()
 
     run("./qmodope_mainens ensemble.1.pdb")
@@ -160,7 +165,7 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4):
         run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl")
         run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl")
 
-        generate_models_xplor(output, xplor_bin_dir, xplor_script_dir, ncpus, iter_n)
+        generate_models_xplor(output, xplor_bin_dir, xplor_script_dir, ncpus, iter_n, nmodels2)
         print()
 
         run(f"./qmodope_mainens ensemble.{iter_n + 1}.pdb")

@@ -7,11 +7,6 @@ from contextlib import redirect_stdout
 from .networks import aln_to_predictions, aln_to_predictions_iter
 from .utils import *
 
-ncycles_norelax = 2   # Number of cycles
-ncycles_relax   = 10  # Number of cycles for sample relax protocol
-nmodels1        = 100 # Number of models in first cycle
-nmodels2        = 20  # Number of models in subsequence cycles
-
 phiprob1 = 0.88
 psiprob1 = 0.98
 phiprob2 = 0.88
@@ -48,7 +43,15 @@ def generate_model_cns(output, bin_dir, target, iter_n):
     os.remove(f"{target}_sub_embed_1.pdb")
 
 # Protein structure prediction with CNS
-def aln_to_model_cns(aln_filepath, out_dir, relax=False, relax_cmd="relax.static.linuxgccrelease"):
+def aln_to_model_cns(aln_filepath, out_dir, relax=False, relax_cmd="relax.static.linuxgccrelease",
+                        ncycles=-1, nmodels1=-1, nmodels2=-1):
+    if ncycles == -1:
+        ncycles = 10 if relax else 2
+    if nmodels1 == -1:
+        nmodels1 = 100
+    if nmodels2 == -1:
+        nmodels2 = 20
+
     start_time = datetime.now()
     print("Predicting structure from the alignment in", aln_filepath)
 
@@ -85,7 +88,6 @@ def aln_to_model_cns(aln_filepath, out_dir, relax=False, relax_cmd="relax.static
     run(f"{cns_cmd} < {cnsfile_dir}/gseq.inp > gseq.log")
     run(f"{cns_cmd} < {cnsfile_dir}/extn.inp > extn.log")
 
-    ncycles = ncycles_relax if relax else ncycles_norelax
     print(f"Starting iteration 1 of {ncycles}")
     print()
 

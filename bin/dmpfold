@@ -11,6 +11,12 @@ parser.add_argument("-o", "--output", required=True,
     help="the output directory to be created")
 parser.add_argument("-p", "--protocol", choices=["fdf", "cns", "cns-sr", "xplor"], required=True,
     help="the method for generating models from predicted constraints")
+parser.add_argument("-c", "--ncycles", type=int, default=-1,
+    help="the number of modelling iterations, default depends on protocol")
+parser.add_argument("-n1", "--nmodels1", type=int, default=-1,
+    help="the number of models generated for the first iteration, default depends on protocol")
+parser.add_argument("-n2", "--nmodels2", type=int, default=-1,
+    help="the number of models generated for subsequent iterations, default depends on protocol")
 parser.add_argument("-r", "--relaxcmd", default="relax.static.linuxgccrelease",
     help="the command to run Rosetta relax")
 parser.add_argument("-x", "--xplorbindir", default="~/xplor-nih-3.1/bin",
@@ -20,11 +26,24 @@ parser.add_argument("-n", "--xplorncpus", type=int, default=4,
 
 args = parser.parse_args()
 
+if args.ncycles < 1:
+    raise argparse.ArgumentTypeError("ncycles must be a positive integer")
+if args.nmodels1 < 1:
+    raise argparse.ArgumentTypeError("nmodels1 must be a positive integer")
+if args.nmodels2 < 1:
+    raise argparse.ArgumentTypeError("nmodels2 must be a positive integer")
+if args.xplorncpus < 1:
+    raise argparse.ArgumentTypeError("xplorncpus must be a positive integer")
+
 if args.protocol == "fdf":
-    aln_to_model_fdf(args.input, args.output)
+    aln_to_model_fdf(args.input, args.output, ncycles=args.ncycles,
+                        nmodels1=args.nmodels1, nmodels2=args.nmodels2)
 elif args.protocol == "cns":
-    aln_to_model_cns(args.input, args.output)
+    aln_to_model_cns(args.input, args.output, ncycles=args.ncycles,
+                        nmodels1=args.nmodels1, nmodels2=args.nmodels2)
 elif args.protocol == "cns-sr":
-    aln_to_model_cns(args.input, args.output, relax=True, relax_cmd=args.relaxcmd)
+    aln_to_model_cns(args.input, args.output, relax=True, relax_cmd=args.relaxcmd,
+                        ncycles=args.ncycles, nmodels1=args.nmodels1, nmodels2=args.nmodels2)
 elif args.protocol == "xplor":
-    aln_to_model_xplor(args.input, args.output, args.xplorbindir, args.xplorncpus)
+    aln_to_model_xplor(args.input, args.output, args.xplorbindir, ncpus=args.xplorncpus,
+                        ncycles=args.ncycles, nmodels1=args.nmodels1, nmodels2=args.nmodels2)
