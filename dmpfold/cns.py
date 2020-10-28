@@ -26,12 +26,12 @@ def write_dgsa_file(in_file, out_file, target, n_models):
 
 # Sample constraints and generate a single model with CNS
 def generate_model_cns(output, bin_dir, target, iter_n):
+    write_contact_constraints(output, "contacts.current", pthresh="random")
+    run(f"{bin_dir}/contact2noe {target}.fasta contacts.current > contact.tbl")
+
     write_hbond_constraints(output, "hbcontacts.current", topomin="random", minprob="random")
     run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl")
     run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl")
-
-    write_contact_constraints(output, "contacts.current", pthresh="random")
-    run(f"{bin_dir}/contact2noe {target}.fasta contacts.current > contact.tbl")
 
     run(f"{cns_cmd} < dgsa.inp > dgsa.log")
 

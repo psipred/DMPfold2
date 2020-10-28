@@ -22,7 +22,15 @@ xn_mmdgscale = 100.0
 xn_mmdgexp = 2
 
 # Generate models with Xplor-NIH
-def generate_models_xplor(output, xplor_bin_dir, xplor_script_dir, ncpus, iter_n, nmodels):
+def generate_models_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,
+                            ncpus, iter_n, nmodels, contactperc, hbprob):
+    write_contact_constraints(output, "contacts.current", pthresh=contactperc)
+    run(f"{bin_dir}/contact2noe {target}.fasta contacts.current > contact.tbl")
+
+    write_hbond_constraints(output, "hbcontacts.current", topomin=hbrange, minprob=hbprob)
+    run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl")
+    run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl")
+
     nnoe = 1
     for fp in ("contact.tbl", "hbond.tbl", "ssnoe.tbl"):
         with open(fp) as f:
@@ -125,18 +133,11 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4,
     print("Neural network inference done, generating models")
     print()
 
-    write_contact_constraints(output, "contacts.current", pthresh=contactperc1)
-
-    write_hbond_constraints(output, "hbcontacts.current", topomin=hbrange, minprob=hbprob1)
-
     write_dihedral_constraints(output, "dihedral.tbl", "phi", phiprob1)
     write_dihedral_constraints(output, "dihedral.tbl", "psi", psiprob1)
 
-    run(f"{bin_dir}/contact2noe {target}.fasta contacts.current > contact.tbl")
-    run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl")
-    run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl")
-
-    generate_models_xplor(output, xplor_bin_dir, xplor_script_dir, ncpus, 0, nmodels1)
+    generate_models_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,
+                            ncpus, 0, nmodels1, contactperc1, hbprob1)
     print()
 
     run("./qmodope_mainens ensemble.1.pdb")
@@ -154,18 +155,11 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4,
         print("Neural network inference done, generating models")
         print()
 
-        write_contact_constraints(output, "contacts.current", pthresh=contactperc2)
-
-        write_hbond_constraints(output, "hbcontacts.current", topomin=hbrange, minprob=hbprob2)
-
         write_dihedral_constraints(output, "dihedral.tbl", "phi", phiprob2)
         write_dihedral_constraints(output, "dihedral.tbl", "psi", psiprob2)
 
-        run(f"{bin_dir}/contact2noe {target}.fasta contacts.current > contact.tbl")
-        run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl")
-        run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl")
-
-        generate_models_xplor(output, xplor_bin_dir, xplor_script_dir, ncpus, iter_n, nmodels2)
+        generate_models_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,
+                                ncpus, iter_n, nmodels2, contactperc2, hbprob2)
         print()
 
         run(f"./qmodope_mainens ensemble.{iter_n + 1}.pdb")
