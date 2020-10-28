@@ -9,7 +9,7 @@ parser.add_argument("-i", "--input", required=True,
     help="the target sequence and sequence alignment in aln format")
 parser.add_argument("-o", "--output", required=True,
     help="the output directory to be created")
-parser.add_argument("-p", "--protocol", choices=["fdf", "cns", "cns-sr", "xplor"], required=True,
+parser.add_argument("-p", "--protocol", choices=["fdf", "cns", "cns-rel", "xplor"], required=True,
     help="the method for generating models from predicted constraints")
 parser.add_argument("-c", "--ncycles", type=int, default=-1,
     help="the number of modelling iterations, default depends on protocol")
@@ -41,7 +41,7 @@ if args.protocol == "fdf":
 elif args.protocol == "cns":
     aln_to_model_cns(args.input, args.output, ncycles=args.ncycles,
                         nmodels1=args.nmodels1, nmodels2=args.nmodels2)
-elif args.protocol == "cns-sr":
+elif args.protocol == "cns-rel":
     aln_to_model_cns(args.input, args.output, relax=True, relax_cmd=args.relaxcmd,
                         ncycles=args.ncycles, nmodels1=args.nmodels1, nmodels2=args.nmodels2)
 elif args.protocol == "xplor":

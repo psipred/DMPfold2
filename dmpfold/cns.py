@@ -25,7 +25,7 @@ def write_dgsa_file(in_file, out_file, target, n_models):
         of.write(text)
 
 # Sample constraints and generate a single model with CNS
-def generate_model_cns(output, bin_dir, target, iter_n):
+def sample_model_cns(output, bin_dir, target, iter_n):
     write_contact_constraints(output, "contacts.current", pthresh="random")
     run(f"{bin_dir}/contact2noe {target}.fasta contacts.current > contact.tbl")
 
@@ -102,7 +102,7 @@ def aln_to_model_cns(aln_filepath, out_dir, relax=False, relax_cmd="relax.static
     write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, 1)
 
     for model_n in range(nmodels1):
-        generate_model_cns(output, bin_dir, target, 0)
+        sample_model_cns(output, bin_dir, target, 0)
 
     run("./qmodope_mainens ensemble.1.pdb")
     print()
@@ -141,7 +141,7 @@ def aln_to_model_cns(aln_filepath, out_dir, relax=False, relax_cmd="relax.static
         write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, 1)
 
         for model_n in range(nmodels2):
-            generate_model_cns(output, bin_dir, target, iter_n)
+            sample_model_cns(output, bin_dir, target, iter_n)
 
         run(f"./qmodope_mainens ensemble.{iter_n + 1}.pdb")
         print()
