@@ -25,6 +25,6 @@ if args.protocol == "fdf":
 elif args.protocol == "cns":
     aln_to_model_cns(args.input, args.output)
 elif args.protocol == "cns-sr":
-    aln_to_model_cns(args.input, args.output, relax=True, relaxcmd=args.relaxcmd)
+    aln_to_model_cns(args.input, args.output, relax=True, relax_cmd=args.relaxcmd)
 elif args.protocol == "xplor":
     aln_to_model_xplor(args.input, args.output, args.xplorbindir, args.xplorncpus)

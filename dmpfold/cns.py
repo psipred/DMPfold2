@@ -2,6 +2,7 @@ import sys
 import os
 import shutil
 from datetime import datetime
+from contextlib import redirect_stdout
 
 from .networks import aln_to_predictions, aln_to_predictions_iter
 from .utils import *
@@ -47,7 +48,7 @@ def generate_model_cns(output, bin_dir, target, iter_n):
     os.remove(f"{target}_sub_embed_1.pdb")
 
 # Protein structure prediction with CNS
-def aln_to_model_cns(aln_filepath, out_dir, relax=False, relaxcmd="relax.static.linuxgccrelease"):
+def aln_to_model_cns(aln_filepath, out_dir, relax=False, relax_cmd="relax.static.linuxgccrelease"):
     start_time = datetime.now()
     print("Predicting structure from the alignment in", aln_filepath)
 
@@ -113,7 +114,8 @@ def aln_to_model_cns(aln_filepath, out_dir, relax=False, relaxcmd="relax.static.
 
         if relax:
             if iter_n >= 2:
-                run(f"{relaxcmd} -overwrite -in:file:s best_qdope.pdb")
+                with open(os.devnull, "w") as f, redirect_stdout(f):
+                    run(f"{relax_cmd} -overwrite -in:file:s best_qdope.pdb")
             else:
                 shutil.copyfile("best_qdope.pdb", "best_qdope_0001.pdb")
 
