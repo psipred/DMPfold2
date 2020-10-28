@@ -118,9 +118,9 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4,
                         sample_relax=False, relax_cmd="relax.static.linuxgccrelease",
                         ncycles=-1, nmodels1=-1, nmodels2=-1):
     if ncycles == -1:
-        ncycles = 2
+        ncycles = 10 if sample_relax else 2
     if nmodels1 == -1:
-        nmodels1 = 20
+        nmodels1 = 100 if sample_relax else 20
     if nmodels2 == -1:
         nmodels2 = 20
 
