@@ -7,16 +7,6 @@ from glob import glob
 from .networks import aln_to_predictions, aln_to_predictions_iter
 from .utils import *
 
-contactperc1 = 0.47
-contactperc2 = 0.59
-hbprob1 = 0.49
-hbprob2 = 0.72
-phiprob1 = 0.25
-psiprob1 = 0.91
-phiprob2 = 0.16
-psiprob2 = 0.68
-hbrange = 3
-
 # Scale factor and exponent for the DG restraint energy term for regularisation
 xn_mmdgscale = 100.0
 xn_mmdgexp = 2
@@ -72,8 +62,60 @@ def generate_models_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_d
                 of.write(line)
             of.write("END\n")
 
+# Sample constraints and generate a single model with Xplor-NIH
+def sample_model_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,
+                            ncpus, iter_n):
+    write_contact_constraints(output, "contacts.current", pthresh="random")
+    run(f"{bin_dir}/contact2noe {target}.fasta contacts.current > contact.tbl")
+
+    write_hbond_constraints(output, "hbcontacts.current", topomin="random", minprob="random")
+    run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl")
+    run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl")
+
+    nnoe = 1
+    for fp in ("contact.tbl", "hbond.tbl", "ssnoe.tbl"):
+        with open(fp) as f:
+            nnoe += len(f.readlines())
+
+    with open("dihedral.tbl") as f:
+        ndih = len(f.readlines()) + 1
+
+    for fp in glob("dg*.pdb*"):
+        os.remove(fp)
+
+    seed = random_seed()
+    with open(f"{xplor_script_dir}/nmr___dg_sub_embed.inp") as f, open("dgsub.inp", "w") as of:
+        text = f.read()
+        text = text.replace("__XPLORSEED__", str(seed)        )
+        text = text.replace("__NMODELS__"  , "1"              )
+        text = text.replace("__NNOE__"     , str(nnoe)        )
+        text = text.replace("__NDIH__"     , str(ndih)        )
+        text = text.replace("_MMDGEXP_"    , str(xn_mmdgexp)  )
+        text = text.replace("_MMDGSCALE_"  , str(xn_mmdgscale))
+        of.write(text)
+
+    xn_cpu = 1
+    run(f"{xplor_bin_dir}/xplor -smp {xn_cpu} -omp 1 -o dg_sub.log dgsub.inp")
+
+    with open(f"{xplor_script_dir}/nmr___dgsa.inp") as f, open("dgsa.inp", "w") as of:
+        text = f.read()
+        text = text.replace("__XPLORSEED__", str(seed)        )
+        text = text.replace("__NMODELS__"  , "1"              )
+        text = text.replace("__NNOE__"     , str(nnoe)        )
+        text = text.replace("__NDIH__"     , str(ndih)        )
+        of.write(text)
+
+    run(f"{xplor_bin_dir}/xplor -smp {xn_cpu} -omp 1 -o dgsa.log dgsa.inp")
+
+    with open(f"ensemble.{iter_n + 1}.pdb", "a") as of:
+        for fp in glob("dgsa_[0-9]*.pdb"):
+            for line in order_pdb_file(fp):
+                of.write(line)
+            of.write("END\n")
+
 # Protein structure prediction with Xplor-NIH
 def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4,
+                        sample_relax=False, relax_cmd="relax.static.linuxgccrelease",
                         ncycles=-1, nmodels1=-1, nmodels2=-1):
     if ncycles == -1:
         ncycles = 2
@@ -81,6 +123,22 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4,
         nmodels1 = 20
     if nmodels2 == -1:
         nmodels2 = 20
+
+    if sample_relax:
+        phiprob1 = 0.88
+        psiprob1 = 0.98
+        phiprob2 = 0.88
+        psiprob2 = 0.98
+    else:
+        contactperc1 = 0.47
+        contactperc2 = 0.59
+        hbprob1      = 0.49
+        hbprob2      = 0.72
+        phiprob1     = 0.25
+        psiprob1     = 0.91
+        phiprob2     = 0.16
+        psiprob2     = 0.68
+        hbrange      = 3
 
     start_time = datetime.now()
     print("Predicting structure from the alignment in", aln_filepath)
@@ -136,8 +194,13 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4,
     write_dihedral_constraints(output, "dihedral.tbl", "phi", phiprob1)
     write_dihedral_constraints(output, "dihedral.tbl", "psi", psiprob1)
 
-    generate_models_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,
-                            ncpus, 0, nmodels1, contactperc1, hbprob1)
+    if sample_relax:
+        for model_n in range(nmodels1):
+            sample_model_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,
+                                ncpus, 0)
+    else:
+        generate_models_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,
+                                ncpus, 0, nmodels1, contactperc1, hbprob1)
     print()
 
     run("./qmodope_mainens ensemble.1.pdb")
@@ -150,7 +213,23 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4,
         shutil.move("contacts.current", f"contacts.{iter_n}")
         shutil.move("hbcontacts.current", f"hbcontacts.{iter_n}")
 
-        output = aln_to_predictions_iter(os.path.join(cwd, aln_filepath), "best_qdope.pdb")
+        if sample_relax:
+            if iter_n >= 2:
+                with open(os.devnull, "w") as f, redirect_stdout(f):
+                    run(f"{relax_cmd} -overwrite -in:file:s best_qdope.pdb")
+            else:
+                shutil.copyfile("best_qdope.pdb", "best_qdope_0001.pdb")
+
+            with open("best_qdope_0001.pdb") as f, open("ref.pdb", "w") as of:
+                for line in f:
+                    if line.startswith("ATOM"):
+                        of.write(line)
+                of.write("END\n")
+            os.remove("best_qdope_0001.pdb")
+
+            output = aln_to_predictions_iter(os.path.join(cwd, aln_filepath), "ref.pdb")
+        else:
+            output = aln_to_predictions_iter(os.path.join(cwd, aln_filepath), "best_qdope.pdb")
 
         print("Neural network inference done, generating models")
         print()
@@ -158,8 +237,13 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4,
         write_dihedral_constraints(output, "dihedral.tbl", "phi", phiprob2)
         write_dihedral_constraints(output, "dihedral.tbl", "psi", psiprob2)
 
-        generate_models_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,
-                                ncpus, iter_n, nmodels2, contactperc2, hbprob2)
+        if sample_relax:
+            for model_n in range(nmodels2):
+                sample_model_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,
+                                    ncpus, iter_n)
+        else:
+            generate_models_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,
+                                    ncpus, iter_n, nmodels2, contactperc2, hbprob2)
         print()
 
         run(f"./qmodope_mainens ensemble.{iter_n + 1}.pdb")
