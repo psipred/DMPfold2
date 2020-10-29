@@ -59,6 +59,9 @@ def generate_models_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_d
     with open(os.devnull, "w") as f, redirect_stdout(f):
         run(f"{xplor_bin_dir}/xplor -smp {xn_cpu} -omp 1 -o dgsa.log dgsa.inp")
 
+    if len(glob("dgsa_[0-9]*.pdb")) == 0:
+        raise Exception("Xplor-NIH execution failed, check dg_sub.log and dgsa.log for details")
+
     with open(f"ensemble.{iter_n + 1}.pdb", "a") as of:
         for fp in glob("dgsa_[0-9]*.pdb"):
             for line in order_pdb_file(fp):
@@ -111,6 +114,9 @@ def sample_model_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,
 
     with open(os.devnull, "w") as f, redirect_stdout(f):
         run(f"{xplor_bin_dir}/xplor -smp {xn_cpu} -omp 1 -o dgsa.log dgsa.inp")
+
+    if len(glob("dgsa_[0-9]*.pdb")) == 0:
+        raise Exception("Xplor-NIH execution failed, check dg_sub.log and dgsa.log for details")
 
     with open(f"ensemble.{iter_n + 1}.pdb", "a") as of:
         for fp in glob("dgsa_[0-9]*.pdb"):

@@ -35,6 +35,9 @@ def sample_model_cns(output, bin_dir, target, iter_n):
 
     run(f"{cns_cmd} < dgsa.inp > dgsa.log")
 
+    if not os.path.isfile(f"{target}_1.pdb"):
+        raise Exception("CNS execution failed, check dgsa.log for details")
+
     with open(f"ensemble.{iter_n + 1}.pdb", "a") as of:
         for line in order_pdb_file(f"{target}_1.pdb"):
             of.write(line)
