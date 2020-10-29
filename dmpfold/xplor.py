@@ -3,6 +3,7 @@ import os
 import shutil
 from datetime import datetime
 from glob import glob
+from contextlib import redirect_stdout
 
 from .networks import aln_to_predictions, aln_to_predictions_iter
 from .utils import *
@@ -44,7 +45,8 @@ def generate_models_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_d
         of.write(text)
 
     xn_cpu = min(nmodels, ncpus)
-    run(f"{xplor_bin_dir}/xplor -smp {xn_cpu} -omp 1 -o dg_sub.log dgsub.inp")
+    with open(os.devnull, "w") as f, redirect_stdout(f):
+        run(f"{xplor_bin_dir}/xplor -smp {xn_cpu} -omp 1 -o dg_sub.log dgsub.inp")
 
     with open(f"{xplor_script_dir}/nmr___dgsa.inp") as f, open("dgsa.inp", "w") as of:
         text = f.read()
@@ -54,7 +56,8 @@ def generate_models_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_d
         text = text.replace("__NDIH__"     , str(ndih)        )
         of.write(text)
 
-    run(f"{xplor_bin_dir}/xplor -smp {xn_cpu} -omp 1 -o dgsa.log dgsa.inp")
+    with open(os.devnull, "w") as f, redirect_stdout(f):
+        run(f"{xplor_bin_dir}/xplor -smp {xn_cpu} -omp 1 -o dgsa.log dgsa.inp")
 
     with open(f"ensemble.{iter_n + 1}.pdb", "a") as of:
         for fp in glob("dgsa_[0-9]*.pdb"):
@@ -95,7 +98,8 @@ def sample_model_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,
         of.write(text)
 
     xn_cpu = 1
-    run(f"{xplor_bin_dir}/xplor -smp {xn_cpu} -omp 1 -o dg_sub.log dgsub.inp")
+    with open(os.devnull, "w") as f, redirect_stdout(f):
+        run(f"{xplor_bin_dir}/xplor -smp {xn_cpu} -omp 1 -o dg_sub.log dgsub.inp")
 
     with open(f"{xplor_script_dir}/nmr___dgsa.inp") as f, open("dgsa.inp", "w") as of:
         text = f.read()
@@ -105,7 +109,8 @@ def sample_model_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,
         text = text.replace("__NDIH__"     , str(ndih)        )
         of.write(text)
 
-    run(f"{xplor_bin_dir}/xplor -smp {xn_cpu} -omp 1 -o dgsa.log dgsa.inp")
+    with open(os.devnull, "w") as f, redirect_stdout(f):
+        run(f"{xplor_bin_dir}/xplor -smp {xn_cpu} -omp 1 -o dgsa.log dgsa.inp")
 
     with open(f"ensemble.{iter_n + 1}.pdb", "a") as of:
         for fp in glob("dgsa_[0-9]*.pdb"):
@@ -201,7 +206,6 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4,
     else:
         generate_models_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,
                                 ncpus, 0, nmodels1, contactperc1, hbprob1)
-    print()
 
     run("./qmodope_mainens ensemble.1.pdb")
     print()
