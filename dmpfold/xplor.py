@@ -131,9 +131,9 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4,
     if ncycles == -1:
         ncycles = 10 if sample_relax else 2
     if nmodels1 == -1:
-        nmodels1 = 100 if sample_relax else 20
+        nmodels1 = 50 if sample_relax else 20
     if nmodels2 == -1:
-        nmodels2 = 20
+        nmodels2 = 10 if sample_relax else 20
 
     if sample_relax:
         phiprob1 = 0.88
