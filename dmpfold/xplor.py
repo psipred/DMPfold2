@@ -14,7 +14,7 @@ xn_mmdgexp = 2
 
 # Generate models with Xplor-NIH
 def generate_models_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,
-                            ncpus, iter_n, nmodels, contactperc, hbprob):
+                            ncpus, iter_n, nmodels, contactperc, hbrange, hbprob):
     write_contact_constraints(output, "contacts.current", pthresh=contactperc)
     run(f"{bin_dir}/contact2noe {target}.fasta contacts.current > contact.tbl")
 
@@ -209,7 +209,7 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4,
             sample_model_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir, 0)
     else:
         generate_models_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,
-                                ncpus, 0, nmodels1, contactperc1, hbprob1)
+                                ncpus, 0, nmodels1, contactperc1, hbrange, hbprob1)
 
     run("./qmodope_mainens ensemble.1.pdb")
     print()
@@ -250,7 +250,7 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4,
                 sample_model_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir, iter_n)
         else:
             generate_models_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,
-                                    ncpus, iter_n, nmodels2, contactperc2, hbprob2)
+                                    ncpus, iter_n, nmodels2, contactperc2, hbrange, hbprob2)
         print()
 
         run(f"./qmodope_mainens ensemble.{iter_n + 1}.pdb")
