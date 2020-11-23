@@ -7,11 +7,6 @@ from contextlib import redirect_stdout
 from .networks import aln_to_predictions, aln_to_predictions_iter
 from .utils import *
 
-phiprob1 = 0.88
-psiprob1 = 0.98
-phiprob2 = 0.88
-psiprob2 = 0.98
-
 cns_cmd = "cns"
 
 # Write CNS folding script
@@ -23,6 +18,28 @@ def write_dgsa_file(in_file, out_file, target, n_models):
         text = text.replace("_SEED_"       , str(seed)    )
         text = text.replace("_NMODELS_"    , str(n_models))
         of.write(text)
+
+# Generate models with CNS
+def generate_models_cns(output, bin_dir, target, iter_n, nmodels, contactperc, hbrange, hbprob):
+    write_contact_constraints(output, "contacts.current", pthresh=contactperc)
+    run(f"{bin_dir}/contact2noe {target}.fasta contacts.current > contact.tbl")
+
+    write_hbond_constraints(output, "hbcontacts.current", topomin=hbrange, minprob=hbprob)
+    run(f"{bin_dir}/hbond2noe hbcontacts.current > hbond.tbl")
+    run(f"{bin_dir}/hbond2ssnoe hbcontacts.current > ssnoe.tbl")
+
+    run(f"{cns_cmd} < dgsa.inp > dgsa.log")
+
+    for model_i in range(nmodels):
+        model_n = model_i + 1
+        if not os.path.isfile(f"{target}_{model_n}.pdb"):
+            raise Exception("CNS execution failed, check dgsa.log for details")
+        with open(f"ensemble.{iter_n + 1}.pdb", "a") as of:
+            for line in order_pdb_file(f"{target}_{model_n}.pdb"):
+                of.write(line)
+            of.write("END\n")
+        os.remove(f"{target}_{model_n}.pdb")
+        os.remove(f"{target}_sub_embed_{model_n}.pdb")
 
 # Sample constraints and generate a single model with CNS
 def sample_model_cns(output, bin_dir, target, iter_n):
@@ -46,14 +63,26 @@ def sample_model_cns(output, bin_dir, target, iter_n):
     os.remove(f"{target}_sub_embed_1.pdb")
 
 # Protein structure prediction with CNS
-def aln_to_model_cns(aln_filepath, out_dir, relax=False, relax_cmd="relax.static.linuxgccrelease",
-                        ncycles=-1, nmodels1=-1, nmodels2=-1):
+def aln_to_model_cns(aln_filepath, out_dir, sample_relax=False,
+                        relax_cmd="relax.static.linuxgccrelease", ncycles=-1, nmodels1=-1,
+                        nmodels2=-1):
     if ncycles == -1:
-        ncycles = 10 if relax else 2
+        ncycles = 10 if sample_relax else 2
     if nmodels1 == -1:
         nmodels1 = 100
     if nmodels2 == -1:
         nmodels2 = 20
+
+    phiprob1 = 0.88
+    psiprob1 = 0.98
+    phiprob2 = 0.88
+    psiprob2 = 0.98
+    if not sample_relax:
+        contactperc1 = 0.42
+        contactperc2 = 0.43
+        hbprob1      = 0.85
+        hbprob2      = 0.85
+        hbrange      = 4
 
     start_time = datetime.now()
     print("Predicting structure from the alignment in", aln_filepath)
@@ -102,10 +131,14 @@ def aln_to_model_cns(aln_filepath, out_dir, relax=False, relax_cmd="relax.static
     write_dihedral_constraints(output, "dihedral.tbl", "phi", phiprob1)
     write_dihedral_constraints(output, "dihedral.tbl", "psi", psiprob1)
 
-    write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, 1)
-
-    for model_n in range(nmodels1):
-        sample_model_cns(output, bin_dir, target, 0)
+    if sample_relax:
+        write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, 1)
+        for model_i in range(nmodels1):
+            sample_model_cns(output, bin_dir, target, 0)
+    else:
+        write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, nmodels1)
+        generate_models_cns(output, bin_dir, target, 0, nmodels1,
+                            contactperc1, hbrange, hbprob1)
 
     run("./qmodope_mainens ensemble.1.pdb")
     print()
@@ -117,7 +150,7 @@ def aln_to_model_cns(aln_filepath, out_dir, relax=False, relax_cmd="relax.static
         shutil.move("contacts.current", f"contacts.{iter_n}")
         shutil.move("hbcontacts.current", f"hbcontacts.{iter_n}")
 
-        if relax:
+        if sample_relax:
             if iter_n >= 2:
                 with open(os.devnull, "w") as f, redirect_stdout(f):
                     run(f"{relax_cmd} -overwrite -in:file:s best_qdope.pdb")
@@ -141,10 +174,14 @@ def aln_to_model_cns(aln_filepath, out_dir, relax=False, relax_cmd="relax.static
         write_dihedral_constraints(output, "dihedral.tbl", "phi", phiprob2)
         write_dihedral_constraints(output, "dihedral.tbl", "psi", psiprob2)
 
-        write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, 1)
-
-        for model_n in range(nmodels2):
-            sample_model_cns(output, bin_dir, target, iter_n)
+        if sample_relax:
+            write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, 1)
+            for model_i in range(nmodels2):
+                sample_model_cns(output, bin_dir, target, iter_n)
+        else:
+            write_dgsa_file(f"{cnsfile_dir}/dgsa.inp", "dgsa.inp", target, nmodels2)
+            generate_models_cns(output, bin_dir, target, iter_n, nmodels2,
+                                contactperc2, hbrange, hbprob2)
 
         run(f"./qmodope_mainens ensemble.{iter_n + 1}.pdb")
         print()

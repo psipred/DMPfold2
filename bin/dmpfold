@@ -9,7 +9,7 @@ parser.add_argument("-i", "--input", required=True,
     help="the target sequence and sequence alignment in aln format")
 parser.add_argument("-o", "--output", required=True,
     help="the output directory to be created")
-parser.add_argument("-p", "--protocol", choices=["fdf", "cns", "cns-rel", "xplor", "xplor-srel"],
+parser.add_argument("-p", "--protocol", choices=["fdf", "cns", "cns-srel", "xplor", "xplor-srel"],
     required=True, help="the method for generating models from predicted constraints")
 parser.add_argument("-c", "--ncycles", type=int, default=-1,
     help="the number of modelling iterations, default depends on protocol")
@@ -37,8 +37,8 @@ if args.protocol == "fdf":
 elif args.protocol == "cns":
     aln_to_model_cns(args.input, args.output, ncycles=args.ncycles,
                         nmodels1=args.nmodels1, nmodels2=args.nmodels2)
-elif args.protocol == "cns-rel":
-    aln_to_model_cns(args.input, args.output, relax=True, relax_cmd=args.relaxcmd,
+elif args.protocol == "cns-srel":
+    aln_to_model_cns(args.input, args.output, sample_relax=True, relax_cmd=args.relaxcmd,
                         ncycles=args.ncycles, nmodels1=args.nmodels1, nmodels2=args.nmodels2)
 elif args.protocol == "xplor":
     aln_to_model_xplor(args.input, args.output, args.xplorbindir, ncpus=args.xplorncpus,

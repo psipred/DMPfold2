@@ -140,14 +140,14 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4,
         phiprob2 = 0.88
         psiprob2 = 0.98
     else:
-        contactperc1 = 0.47
-        contactperc2 = 0.59
-        hbprob1      = 0.49
-        hbprob2      = 0.72
         phiprob1     = 0.25
         psiprob1     = 0.91
         phiprob2     = 0.16
         psiprob2     = 0.68
+        contactperc1 = 0.47
+        contactperc2 = 0.59
+        hbprob1      = 0.49
+        hbprob2      = 0.72
         hbrange      = 3
 
     start_time = datetime.now()
@@ -205,7 +205,7 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4,
     write_dihedral_constraints(output, "dihedral.tbl", "psi", psiprob1)
 
     if sample_relax:
-        for model_n in range(nmodels1):
+        for model_i in range(nmodels1):
             sample_model_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir, 0)
     else:
         generate_models_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,
@@ -246,7 +246,7 @@ def aln_to_model_xplor(aln_filepath, out_dir, xplor_bin_dir, ncpus=4,
         write_dihedral_constraints(output, "dihedral.tbl", "psi", psiprob2)
 
         if sample_relax:
-            for model_n in range(nmodels2):
+            for model_i in range(nmodels2):
                 sample_model_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir, iter_n)
         else:
             generate_models_xplor(output, bin_dir, target, xplor_bin_dir, xplor_script_dir,

@@ -29,7 +29,7 @@ def run(cmd):
 def random_seed():
     return randrange(0, 32768)
 
-# Write sequence file for
+# Write sequence file for CNS/Xplor-NIH
 def write_seq_file(in_file, out_file):
     seq = ""
     with open(in_file) as f:
