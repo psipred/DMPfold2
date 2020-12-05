@@ -120,7 +120,7 @@ class ForceFolder(torch.nn.Module):
         self.min_cb_energy = min_cb_energies.sum()
 
     # Run folding simulations for a given number of steps
-    def fold(self, n_steps):
+    def fold(self, n_steps, n_min_steps):
         # See https://arxiv.org/pdf/1401.1181.pdf for derivation of forces
         if integrator == "vel":
             vels = {}
@@ -561,7 +561,7 @@ def aln_to_model_fdf(aln_filepath, out_dir, ncycles=-1, nmodels1=-1, nmodels2=-1
     force_folder = ForceFolder(sequence, nmodels1, gaussian_weights(output),
                             hbond_constraints(output, hb_prob_init), dihedral_constraints(output, 1))
     print()
-    satisfaction_score = force_folder.fold(n_steps)
+    satisfaction_score = force_folder.fold(n_steps, n_min_steps)
     force_folder.write_coords("traj")
     best_score = modeller_fa_and_score(env, 1, nmodels1, output, sequence)
     iter_scores = [best_score]
@@ -577,7 +577,7 @@ def aln_to_model_fdf(aln_filepath, out_dir, ncycles=-1, nmodels1=-1, nmodels2=-1
         force_folder = ForceFolder(sequence, nmodels2, gaussian_weights(output),
                         hbond_constraints(output, hb_prob_iter), dihedral_constraints(output, iter_n))
         print()
-        satisfaction_score = force_folder.fold(n_steps)
+        satisfaction_score = force_folder.fold(n_steps, n_min_steps)
         force_folder.write_coords("traj")
         best_score = modeller_fa_and_score(env, iter_n, nmodels2, output, sequence)
         iter_scores.append(best_score)
