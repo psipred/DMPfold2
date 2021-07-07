@@ -1,6 +1,6 @@
 # DMPfold2
 
-Development code for DMPfold2 distribution (currently private).
+This is the CASP14 version of DMPfold2, not the final version.
 
 ## Installation
 
@@ -12,27 +12,14 @@ We have attempted to make DMPfold2 easier to install than DMPfold1, which had ma
 
 3. Install [MODELLER](https://salilab.org/modeller), which is usually as simple as running `conda install -c salilab modeller` and modifying the license key.
 
-4. Install DMPfold2:
-```bash
-git clone https://github.com/psipred/DMPfold2 # Enter GitHub username and password
-cd DMPfold2
-pip install -e .
-```
-[This will become `pip install dmpfold` on registering in PyPI.]
+4. Install DMPfold2 by downloading or cloning the repository from GitHub then running `pip install -e .` from the `DMPfold2` directory. This will automatically install NumPy, SciPy and PeptideBuilder if required, and will put the executable `dmpfold` on the path.
 
-This will automatically install NumPy, SciPy and PeptideBuilder if required, and will put the executable `dmpfold` on the path.
-
-5. Copy or symlink the trained NN models to relevant place:
+5. Download the trained NN models and move them to the relevant place:
 ```bash
-mkdir -p dmpfold/nn/multigram dmpfold/nn/multigram-iter # From DMPfold2 directory
-for i in {1..4}; do
-    ln -s path/to/multigram/FINAL_fullmap_distcov_model$i.pt dmpfold/nn/multigram/FINAL_fullmap_distcov_model$i.pt
-done
-for i in {1..3}; do
-    ln -s path/to/multigram-iter/FINAL_fullmap_distcov_model$i.pt dmpfold/nn/multigram-iter/FINAL_fullmap_distcov_model$i.pt
-done
+wget http://bioinfadmin.cs.ucl.ac.uk/downloads/dmpfold2/casp14_trained_models.tar.gz
+tar -xvf casp14_trained_models.tar.gz
+mv nn path/to/DMPfold2/dmpfold
 ```
-[This step will disappear once we work out the best way to upload the 120 MB network files to GitHub, which has a 100 MB file size limit.]
 
 The above steps are sufficient to predict distograms with DMPfold2 from a sequence alignment.
 To generate models, you will need to set up at least one of the following 3 approaches.
@@ -73,8 +60,6 @@ dmpfold -i prot.aln -o out_dir -p fdf # Force-directed folding protocol
 ### Getting sequence alignments
 
 Sequence alignments can be obtained from a target sequence in a number of ways, for example by running `hhblits` on the Uniclust database.
-
-[Example script and conversion to aln.]
 
 ### Predicting distances
 
