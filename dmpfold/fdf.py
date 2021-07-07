@@ -331,7 +331,7 @@ class ForceFolder(torch.nn.Module):
 
             # Apply Andersen thermostat
             # Simulated annealing changes temperature over simulation
-            temperature = temperature_start - (temperature_start - temperature_end) * step_n / n_steps
+            temperature = temperature_start - (temperature_start - temperature_end) * min(step_n / n_steps, 1.0)
             if thermostat_const > 0.0 and step_n < n_steps:
                 thermostat_prob = timestep / thermostat_const
                 for ri in range(self.n_res):
