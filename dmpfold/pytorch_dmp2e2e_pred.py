@@ -75,11 +75,13 @@ def main():
     # Create neural network model (depending on first command line parameter)
     network = GRUResNet(512,128).eval().to(device)
 
-    modeldir = os.path.dirname(os.path.realpath(__file__)) + '/trained_model'
+    modeldir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'trained_model')
 
     # Model parameters stored as two files to get round GitHub's file size limit
-    trained_model = torch.load(modeldir + '/FINAL_fullmap_e2e_model_part1.pt', map_location=lambda storage, loc: storage)
-    trained_model.update(torch.load(modeldir + '/FINAL_fullmap_e2e_model_part2.pt', map_location=lambda storage, loc: storage))
+    trained_model = torch.load(os.path.join(modeldir, 'FINAL_fullmap_e2e_model_part1.pt'),
+                                map_location=lambda storage, loc: storage)
+    trained_model.update(torch.load(os.path.join(modeldir, 'FINAL_fullmap_e2e_model_part2.pt'),
+                                map_location=lambda storage, loc: storage))
     network.load_state_dict(trained_model)
 
     with open(args.input_file, 'r') as alnfile:
