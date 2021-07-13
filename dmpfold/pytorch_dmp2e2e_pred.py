@@ -94,7 +94,8 @@ def main():
             for line in tpltpdbfile:
                 if line[:4] == 'ATOM' and line[12:16] == ' CA ':
                     # Split the line
-                    pdb_fields = [line[:6], line[6:11], line[12:16], line[17:20], line[21], line[22:26], line[30:38], line[38:46], line[46:54]]
+                    pdb_fields = [line[:6], line[6:11], line[12:16], line[17:20], line[21],
+                                  line[22:26], line[30:38], line[38:46], line[46:54]]
                     coords.append(np.array([float(pdb_fields[6]), float(pdb_fields[7]), float(pdb_fields[8])], dtype=np.float32))
 
         init_coords = torch.from_numpy(np.asarray(coords)).unsqueeze(0).to(device)
@@ -129,7 +130,11 @@ def main():
 
     inputs2 = torch.cat((f2d_dca, dmap), dim=1)
 
-    rnamedict = {0:'ALA', 1:'ARG', 2:'ASN', 3:'ASP', 4:'CYS', 5:'GLN', 6:'GLU', 7:'GLY', 8:'HIS', 9:'ILE', 10:'LEU', 11:'LYS', 12:'MET', 13:'PHE', 14:'PRO', 15:'SER', 16:'THR', 17:'TRP', 18:'TYR', 19:'VAL'}
+    rnamedict = {
+        0:'ALA', 1:'ARG', 2:'ASN', 3:'ASP', 4:'CYS', 5:'GLN', 6:'GLU', 7:'GLY', 8:'HIS',
+        9:'ILE', 10:'LEU', 11:'LYS', 12:'MET', 13:'PHE', 14:'PRO', 15:'SER', 16:'THR', 17:'TRP',
+        18:'TYR', 19:'VAL'
+    }
 
     network.eval()
     with torch.no_grad():

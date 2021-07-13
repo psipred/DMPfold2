@@ -12,7 +12,8 @@ class Maxout2d(nn.Module):
     def __init__(self, in_channels, out_channels, pool_size, kernel_size=1, dilation=1, block=0):
         super(Maxout2d, self).__init__()
         self.in_channels, self.out_channels, self.pool_size = in_channels, out_channels, pool_size
-        self.lin = nn.Conv2d(in_channels=in_channels, out_channels=out_channels * pool_size, kernel_size=kernel_size, dilation=dilation, padding=dilation*(kernel_size-1)//2)
+        self.lin = nn.Conv2d(in_channels=in_channels, out_channels=out_channels * pool_size,
+                             kernel_size=kernel_size, dilation=dilation, padding=dilation*(kernel_size-1)//2)
         self.norm = nn.InstanceNorm2d(out_channels, affine=True)
         if block > 0:
             nn.init.xavier_uniform_(self.lin.weight, gain=1.0 / sqrt(block))
@@ -84,7 +85,8 @@ class ResNet_Block(nn.Module):
         super(ResNet_Block, self).__init__()
         self.dropout1 = nn.Dropout(p=0.2)
         self.dropout2 = nn.Dropout2d(p=0.2)
-        self.layer1 = Maxout2d(in_channels=width, out_channels=width, pool_size=4, kernel_size=fsize, dilation=dilv, block=nblock)
+        self.layer1 = Maxout2d(in_channels=width, out_channels=width, pool_size=4,
+                               kernel_size=fsize, dilation=dilv, block=nblock)
         self.scSE = SCSE(width, 16)
 
     def forward(self, x):
