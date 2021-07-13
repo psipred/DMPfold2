@@ -19,5 +19,5 @@ setuptools.setup(
     ],
     keywords="protein structure prediction deep learning evolutionary constraint",
     scripts=["bin/dmpfold"],
-    install_requires=["numpy", "scipy", "PeptideBuilder"],
+    install_requires=["numpy"],
 )
