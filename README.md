@@ -1,6 +1,7 @@
 # DMPfold2
 
 This is the CASP14 version of DMPfold2, not the final version.
+If you use DMPfold2, please cite the paper.
 
 ## Installation
 
@@ -23,7 +24,6 @@ mv nn path/to/DMPfold2/dmpfold
 
 The above steps are sufficient to predict distograms with DMPfold2 from a sequence alignment.
 To generate models, you will need to set up at least one of the following 3 approaches.
-See the DMPfold2 paper for a comparison of the approaches.
 
 ### CNS
 
