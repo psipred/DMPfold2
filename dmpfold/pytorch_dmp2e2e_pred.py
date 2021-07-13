@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # ############################## DMPfold2 Main program ################################
 # By David T. Jones, June 2021
 
@@ -21,7 +19,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.functional import normalize
 
-from nndef_dist_gru2resnet2coords import GRUResNet
+from .nndef_dist_gru2resnet2coords import GRUResNet
 
 
 # reweight MSA based on cutoff (from https://github.com/gjoni/trRosetta/blob/master/network/utils.py)
@@ -156,6 +154,3 @@ def main():
                     confs[ri]))
                 atomnum += 1
     print("END")
-
-if __name__=="__main__":
-    main()
