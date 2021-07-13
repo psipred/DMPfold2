@@ -19,7 +19,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.functional import normalize
 
-from .nndef_dist_gru2resnet2coords import GRUResNet
+from .network import GRUResNet
 
 
 # reweight MSA based on cutoff (from https://github.com/gjoni/trRosetta/blob/master/network/utils.py)
@@ -55,7 +55,7 @@ def fast_dca(msa1hot, weights, penalty = 4.5):
     return torch.cat((features, contacts[:, :, None]), dim=2)
 
 
-def main():
+def run_dmpfold():
 
     # Create the parser
     parser = argparse.ArgumentParser()

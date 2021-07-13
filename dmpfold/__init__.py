@@ -1,1 +1,1 @@
-from .pytorch_dmp2e2e_pred import main
+from .predict import run_dmpfold
