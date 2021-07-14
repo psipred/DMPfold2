@@ -17,7 +17,8 @@ setuptools.setup(
         "Programming Language :: Python :: 3",
         "Topic :: Scientific/Engineering :: Bio-Informatics",
     ],
-    keywords="protein structure prediction deep learning evolutionary constraint",
+    keywords="protein structure prediction deep learning alignment end-to-end",
     scripts=["bin/dmpfold"],
     install_requires=["numpy"],
+    include_package_data=True,
 )

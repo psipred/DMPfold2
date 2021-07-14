@@ -1,0 +1,2 @@
+include dmpfold/trained_model/*
+include dmpfold/example/*
