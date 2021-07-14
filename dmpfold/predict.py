@@ -58,13 +58,21 @@ def fast_dca(msa1hot, weights, penalty = 4.5):
 def run_dmpfold():
 
     # Create the parser
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=(
+        'The DMPfold2 method for fast and accurate protein structure prediction. '
+        'See https://github.com/psipred/DMPfold2 for documentation and citation information.'
+    ))
     # Add arguments
-    parser.add_argument('-i', '--input_file', type=str, required=True)
-    parser.add_argument('-d', '--device', type=str, default='cpu', required=False)
-    parser.add_argument('-t', '--template', type=str, required=False)
-    parser.add_argument('-n', '--iterations', type=int, default=10, required=False)
-    parser.add_argument('-m', '--minsteps', type=int, default=100, required=False)
+    parser.add_argument('-i', '--input_file', type=str, required=True,
+                        help='input sequence alignment in aln format')
+    parser.add_argument('-d', '--device', type=str, default='cpu', required=False,
+                        help='device to run on')
+    parser.add_argument('-t', '--template', type=str, required=False,
+                        help='use a PDB file as a template')
+    parser.add_argument('-n', '--iterations', type=int, default=10, required=False,
+                        help='number of iteration cycles')
+    parser.add_argument('-m', '--minsteps', type=int, default=100, required=False,
+                        help='number of minimization steps')
     # Parse the argument
     args = parser.parse_args()
 
@@ -103,8 +111,8 @@ def run_dmpfold():
     else:
         init_coords = None
 
-    nloops = args.iterations
-    refine_steps = args.minsteps
+    nloops = max(args.iterations, 0)
+    refine_steps = max(args.minsteps, 0)
 
     aa_trans = str.maketrans('ARNDCQEGHILKMFPSTWYVBJOUXZ-.', 'ABCDEFGHIJKLMNOPQRSTUUUUUUVV')
 
