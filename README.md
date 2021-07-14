@@ -1,6 +1,7 @@
 # DMPfold2
 
 DMPfold2 is a fast and accurate method for protein structure prediction.
+It uses learned representations of multiple sequence alignments and end-to-end model generation to quickly generate models from alignments.
 
 If you use DMPfold2, please cite the paper: Deep learning-based prediction of protein structure using learned representations of multiple sequence alignments, S M Kandathil, J G Greener, A M Lau, D T Jones, bioRxiv (2021).
 
@@ -18,6 +19,7 @@ DMPfold2 is easier to install than DMPfold1, which had many more dependencies.
 
 Run `dmpfold -h` to see a help message.
 To run DMPfold2 you will need a sequence alignment in `aln` format: one sequence per line with the ungapped target sequence as the first line.
+Lines starting with `>` are ignored.
 Sequence alignments can be obtained from a target sequence in a number of ways, for example by running `hhblits` on the Uniclust database.
 DMPfold2 prints a PDB format file to stdout, including the confidence as a remark.
 

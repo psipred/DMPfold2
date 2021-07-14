@@ -82,8 +82,11 @@ def run_dmpfold():
                                 map_location=lambda storage, loc: storage))
     network.load_state_dict(trained_model)
 
+    aln = []
     with open(args.input_file, 'r') as alnfile:
-        aln = alnfile.read().splitlines()
+        for line in alnfile.readlines():
+            if not line.startswith(">"):
+                aln.append(line.rstrip())
 
     if args.template is not None:
         with open(args.template, 'r') as tpltpdbfile:
