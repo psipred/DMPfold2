@@ -13,12 +13,12 @@ DMPfold2 is easier to install than DMPfold1, which had many more dependencies.
 
 2. Install [PyTorch](https://pytorch.org) as appropriate for your system.
 
-3. Run `pip install dmpfold`. The repository takes up ~300 MB of disk space.
+3. Run `pip install dmpfold`, which adds the `dmpfold` executable to the path. The repository takes up ~300 MB of disk space.
 
 ## Usage
 
 Run `dmpfold -h` to see a help message.
-To run DMPfold2 you will need a sequence alignment in `aln` format: one sequence per line with the ungapped target sequence as the first line.
+To run DMPfold2 you will need a sequence alignment in `aln` format: one sequence per line with the ungapped target sequence as the first line (example [here](https://github.com/psipred/DMPfold2/tree/master/dmpfold/example/PF10963.aln)).
 Lines starting with `>` are ignored.
 Sequence alignments can be obtained from a target sequence in a number of ways, for example by running `hhblits` on the Uniclust database.
 DMPfold2 prints a PDB format file to stdout, including the confidence as a remark.

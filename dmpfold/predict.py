@@ -60,6 +60,7 @@ def run_dmpfold():
     # Create the parser
     parser = argparse.ArgumentParser(description=(
         'The DMPfold2 method for fast and accurate protein structure prediction. '
+        'Prints a PDB format model file. '
         'See https://github.com/psipred/DMPfold2 for documentation and citation information.'
     ))
     # Add arguments

@@ -1,0 +1,34 @@
+name: CI
+on:
+  pull_request:
+    branches:
+      - master
+  push:
+    branches:
+      - master
+    tags: '*'
+  schedule:
+    - cron: '00 04 * * 1' # 4am every Monday
+  workflow_dispatch:
+jobs:
+  test_repo:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.6, 3.9]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: Install PyTorch
+      run: pip install torch==1.9.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+    - name: Install other dependencies
+      run: pip install numpy
+    - name: Test install
+      run: pip install .
+    - name: Test help
+      run: time python bin/dmpfold -h
+    - name: Test defaults
+      run: time python bin/dmpfold -i dmpfold/example/PF10963.aln
