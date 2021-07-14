@@ -243,7 +243,7 @@ class GRUResNet(nn.Module):
         # See https://math.stackexchange.com/questions/156161/finding-the-coordinates-of-points-from-distance-matrix
         M = 0.5 * (dm[:, 0:1, :].expand(-1, nres, -1) ** 2 + dm[:, :, 0:1].expand(-1, -1, nres) ** 2 - dm ** 2)
         w, v = torch.symeig(M.float(), eigenvectors=True)
-        w = torch.clip(F.relu(w, inplace=False), min = 1e-8)
+        w = torch.clamp(F.relu(w, inplace=False), min = 1e-8)
         w = torch.diag_embed(w.sqrt())
         mds_coords = torch.matmul(v, w)[:, :, -8:]
         coordembed = torch.cat((mat1d.permute(0,2,1), mds_coords), dim=2)
@@ -267,7 +267,7 @@ class GRUResNet(nn.Module):
             #ca_coords = ca_coords + 0.5 * torch.randn_like(ca_coords)
             #if refine_steps > 0:
             #    ca_coords = refine_coords(ca_coords.squeeze(0), refine_steps).unsqueeze(0)
-            dmap = torch.clip((ca_coords - ca_coords.transpose(0,1)).pow(2).sum(dim=2), min = 1e-8).sqrt()
+            dmap = torch.clamp((ca_coords - ca_coords.transpose(0,1)).pow(2).sum(dim=2), min = 1e-8).sqrt()
             resinp = torch.cat((resinp[:, :-1], dmap.unsqueeze(0).unsqueeze(0)), dim=1)
 
             if resinp.requires_grad:
@@ -288,7 +288,7 @@ class GRUResNet(nn.Module):
             # See https://math.stackexchange.com/questions/156161/finding-the-coordinates-of-points-from-distance-matrix
             M = 0.5 * (dm[:, 0:1, :].expand(-1, nres, -1) ** 2 + dm[:, :, 0:1].expand(-1, -1, nres) ** 2 - dm ** 2)
             w, v = torch.symeig(M.float(), eigenvectors=True)
-            w = torch.clip(F.relu(w, inplace=False), min = 1e-8)
+            w = torch.clamp(F.relu(w, inplace=False), min = 1e-8)
             w = torch.diag_embed(w.sqrt())
             mds_coords = torch.matmul(v, w)[:, :, -8:]
             coordembed = torch.cat((mat1d.permute(0,2,1), mds_coords), dim=2)
