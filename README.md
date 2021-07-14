@@ -56,6 +56,22 @@ Ridiculous long run taking hours (100000 iterations + 1000 minimization steps):
 dmpfold -i input.aln -n 100000 -m 1000 > fold.pdb
 ```
 
+### Python module
+
+DMPfold2 can also be used within Python, allowing you to use it as part of other Python scripts.
+For example:
+```python
+from dmpfold import aln_to_coords
+
+# Default options
+coords, confs = aln_to_coords("input.aln")
+
+# Change options
+coords, confs = aln_to_coords("input.aln", device="cuda", template="template.pdb", iterations=30, minsteps=200)
+```
+`coords` is a PyTorch tensor with shape `(nres, 5, 3)` where the first axis is the residue index, the second is the atom (N, CA, C, O, CB) and the third is the coordinates in Angstrom.
+`confs` is a PyTorch tensor corresponding to the predicted confidence for each residue.
+
 ### CASP14 version
 
 If for some reason you need the CASP14 version of the developing DMPfold2, run `git checkout casp14` on this repository and find instructions in the readme file.

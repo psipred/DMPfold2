@@ -22,6 +22,11 @@ from torch.nn.functional import normalize
 from .network import GRUResNet
 
 
+default_device = 'cpu'
+default_iterations = 10
+default_minsteps = 100
+
+
 # reweight MSA based on cutoff (from https://github.com/gjoni/trRosetta/blob/master/network/utils.py)
 def reweight(msa1hot, cutoff):
     id_min = msa1hot.shape[1] * cutoff
@@ -55,29 +60,9 @@ def fast_dca(msa1hot, weights, penalty = 4.5):
     return torch.cat((features, contacts[:, :, None]), dim=2)
 
 
-def run_dmpfold():
-
-    # Create the parser
-    parser = argparse.ArgumentParser(description=(
-        'The DMPfold2 method for fast and accurate protein structure prediction. '
-        'Prints a PDB format model file. '
-        'See https://github.com/psipred/DMPfold2 for documentation and citation information.'
-    ))
-    # Add arguments
-    parser.add_argument('-i', '--input_file', type=str, required=True,
-                        help='input sequence alignment in aln format')
-    parser.add_argument('-d', '--device', type=str, default='cpu', required=False,
-                        help='device to run on')
-    parser.add_argument('-t', '--template', type=str, required=False,
-                        help='use a PDB file as a template')
-    parser.add_argument('-n', '--iterations', type=int, default=10, required=False,
-                        help='number of iteration cycles')
-    parser.add_argument('-m', '--minsteps', type=int, default=100, required=False,
-                        help='number of minimization steps')
-    # Parse the argument
-    args = parser.parse_args()
-
-    device = torch.device(args.device)
+def aln_to_coords(input_file, device=default_device, template=None, iterations=default_iterations,
+                  minsteps=default_minsteps, return_alnmat=False):
+    device = torch.device(device)
 
     # Create neural network model (depending on first command line parameter)
     network = GRUResNet(512,128).eval().to(device)
@@ -92,13 +77,13 @@ def run_dmpfold():
     network.load_state_dict(trained_model)
 
     aln = []
-    with open(args.input_file, 'r') as alnfile:
+    with open(input_file, 'r') as alnfile:
         for line in alnfile.readlines():
             if not line.startswith(">"):
                 aln.append(line.rstrip())
 
-    if args.template is not None:
-        with open(args.template, 'r') as tpltpdbfile:
+    if template is not None:
+        with open(template, 'r') as tpltpdbfile:
             coords = []
             n = 0
             for line in tpltpdbfile:
@@ -112,8 +97,8 @@ def run_dmpfold():
     else:
         init_coords = None
 
-    nloops = max(args.iterations, 0)
-    refine_steps = max(args.minsteps, 0)
+    nloops = max(iterations, 0)
+    refine_steps = max(minsteps, 0)
 
     aa_trans = str.maketrans('ARNDCQEGHILKMFPSTWYVBJOUXZ-.', 'ABCDEFGHIJKLMNOPQRSTUUUUUUVV')
 
@@ -140,29 +125,60 @@ def run_dmpfold():
 
     inputs2 = torch.cat((f2d_dca, dmap), dim=1)
 
+    network.eval()
+    with torch.no_grad():
+        coords, confs = network(inputs, inputs2, nloops, refine_steps)
+        coords = coords.view(-1,length,5,3)[0]
+        confs = confs[0]
+
+    if return_alnmat:
+        return coords, confs, alnmat
+    else:
+        return coords, confs
+
+def run_dmpfold():
+
+    # Create the parser
+    parser = argparse.ArgumentParser(description=(
+        'The DMPfold2 method for fast and accurate protein structure prediction. '
+        'Prints a PDB format model file. '
+        'See https://github.com/psipred/DMPfold2 for documentation and citation information.'
+    ))
+    # Add arguments
+    parser.add_argument('-i', '--input_file', type=str, required=True,
+                        help='input sequence alignment in aln format')
+    parser.add_argument('-d', '--device', type=str, default=default_device, required=False,
+                        help='device to run on')
+    parser.add_argument('-t', '--template', type=str, required=False,
+                        help='use a PDB file as a template')
+    parser.add_argument('-n', '--iterations', type=int, default=default_iterations, required=False,
+                        help='number of iteration cycles')
+    parser.add_argument('-m', '--minsteps', type=int, default=default_minsteps, required=False,
+                        help='number of minimization steps')
+    # Parse the argument
+    args = parser.parse_args()
+
+    coords, confs, alnmat = aln_to_coords(args.input_file, device=args.device,
+                                          template=args.template, iterations=args.iterations,
+                                          minsteps=args.minsteps, return_alnmat=True)
+
     rnamedict = {
         0:'ALA', 1:'ARG', 2:'ASN', 3:'ASP', 4:'CYS', 5:'GLN', 6:'GLU', 7:'GLY', 8:'HIS',
         9:'ILE', 10:'LEU', 11:'LYS', 12:'MET', 13:'PHE', 14:'PRO', 15:'SER', 16:'THR', 17:'TRP',
         18:'TYR', 19:'VAL'
     }
 
-    network.eval()
-    with torch.no_grad():
-        coords, confs = network(inputs, inputs2, nloops, refine_steps)
-        coords = coords.view(-1,length,5,3)
-        confs = confs[0]
-
     print("REMARK  CONF: ", confs.mean().item())
     atoms = (" N  ", " CA ", " C  ", " O  ", " CB ")
     atomnum = 1
-    for ri in range(length):
+    for ri in range(coords.size(0)):
         for ai, an in enumerate(atoms):
             if alnmat[0,ri] != 7 or ai != 4:
                 print("ATOM   %4d %s %s  %4d    %8.3f%8.3f%8.3f  1.00%6.2f" % (
                     atomnum, an, rnamedict[alnmat[0,ri]], ri + 1,
-                    coords[0, ri, ai, 0].item(),
-                    coords[0, ri, ai, 1].item(),
-                    coords[0, ri, ai, 2].item(),
+                    coords[ri, ai, 0].item(),
+                    coords[ri, ai, 1].item(),
+                    coords[ri, ai, 2].item(),
                     confs[ri]))
                 atomnum += 1
     print("END")

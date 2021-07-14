@@ -1,1 +1,1 @@
-from .predict import run_dmpfold
+from .predict import aln_to_coords, run_dmpfold
