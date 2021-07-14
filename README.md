@@ -1,5 +1,7 @@
 # DMPfold2
 
+[![Build status](https://github.com/psipred/DMPfold2/workflows/CI/badge.svg)](https://github.com/psipred/DMPfold2/actions)
+
 DMPfold2 is a fast and accurate method for protein structure prediction.
 It uses learned representations of multiple sequence alignments and end-to-end model generation to quickly generate models from alignments.
 
@@ -11,7 +13,7 @@ DMPfold2 is easier to install than DMPfold1, which had many more dependencies.
 
 1. Python 3.6 or later is required.
 
-2. Install [PyTorch](https://pytorch.org) as appropriate for your system.
+2. Install [PyTorch](https://pytorch.org) as appropriate for your system. A GPU is not required but gives some speedup to longer runs.
 
 3. Run `pip install dmpfold`, which adds the `dmpfold` executable to the path. The repository takes up ~300 MB of disk space.
 
