@@ -15,7 +15,7 @@ DMPfold2 is easier to install than DMPfold1, which had many more dependencies.
 
 2. Install [PyTorch](https://pytorch.org) as appropriate for your system. A GPU is not required but gives some speedup to longer runs.
 
-3. Run `pip install dmpfold`, which adds the `dmpfold` executable to the path. The repository takes up ~300 MB of disk space.
+3. Run `pip install dmpfold`, which adds the `dmpfold` executable to the path. The first time you run a prediction the trained model files (~140 MB) will be downloaded to the package directory, which requires an internet connection.
 
 ## Usage
 

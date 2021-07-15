@@ -11,6 +11,7 @@ import random
 import argparse
 
 from math import sqrt, log, asin, cos, pi, sin
+from urllib import request
 
 import numpy as np
 
@@ -60,6 +61,14 @@ def fast_dca(msa1hot, weights, penalty = 4.5):
     return torch.cat((features, contacts[:, :, None]), dim=2)
 
 
+def download_trained_model(modeldir):
+    print('Downloading trained model (~140 MB) as first time setup to ', modeldir, ', internet connection required', sep='', file=sys.stderr)
+    if not os.path.isdir(modeldir):
+        os.mkdir(modeldir)
+    for part in ['1', '2']:
+        request.urlretrieve(f'https://github.com/psipred/DMPfold2/raw/master/dmpfold/trained_model/FINAL_fullmap_e2e_model_part{part}.pt', os.path.join(modeldir, f'FINAL_fullmap_e2e_model_part{part}.pt'))
+
+
 def aln_to_coords(input_file, device=default_device, template=None, iterations=default_iterations,
                   minsteps=default_minsteps, return_alnmat=False):
     device = torch.device(device)
@@ -68,6 +77,9 @@ def aln_to_coords(input_file, device=default_device, template=None, iterations=d
     network = GRUResNet(512,128).eval().to(device)
 
     modeldir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'trained_model')
+
+    if not os.path.isfile(os.path.join(modeldir, 'FINAL_fullmap_e2e_model_part1.pt')):
+        download_trained_model(modeldir)
 
     # Model parameters stored as two files to get round GitHub's file size limit
     trained_model = torch.load(os.path.join(modeldir, 'FINAL_fullmap_e2e_model_part1.pt'),
