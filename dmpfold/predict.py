@@ -62,11 +62,13 @@ def fast_dca(msa1hot, weights, penalty = 4.5):
 
 
 def download_trained_model(modeldir):
-    print('Downloading trained model (~140 MB) as first time setup to ', modeldir, ', internet connection required', sep='', file=sys.stderr)
+    print('Downloading trained model (~140 MB) as first time setup to ', modeldir,
+          ', internet connection required', sep='', file=sys.stderr)
     if not os.path.isdir(modeldir):
         os.mkdir(modeldir)
     for part in ['1', '2']:
-        request.urlretrieve(f'https://github.com/psipred/DMPfold2/raw/master/dmpfold/trained_model/FINAL_fullmap_e2e_model_part{part}.pt', os.path.join(modeldir, f'FINAL_fullmap_e2e_model_part{part}.pt'))
+        request.urlretrieve(f'https://github.com/psipred/DMPfold2/raw/master/dmpfold/trained_model/FINAL_fullmap_e2e_model_part{part}.pt',
+                            os.path.join(modeldir, f'FINAL_fullmap_e2e_model_part{part}.pt'))
 
 
 def aln_to_coords(input_file, device=default_device, template=None, iterations=default_iterations,
