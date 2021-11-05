@@ -78,3 +78,17 @@ coords, confs = aln_to_coords("input.aln", device="cuda", template="template.pdb
 
 If for some reason you need the CASP14 version of the developing DMPfold2, run `git checkout casp14` on this repository and find instructions in the readme file.
 This version used three approaches to generate models from constraints - CNS, XPLOR-NIH and a PyTorch-based molecular dynamics approach - but is less accurate, slower and harder to install than the current end-to-end approach.
+
+### Training
+
+We provide a script to train DMPfold2 [here](https://github.com/psipred/DMPfold2/tree/master/dmpfold/train.py). You will need to clone the repository, download and extract the [training data]() into the `dmpfold` directory (20 GB download, 55 GB extracted), and may wish to download the pre-trained [model weights](). The list of training/validation samples, clustered at 30% sequence identitity, is [here](https://github.com/psipred/DMPfold2/tree/master/dmpfold/train_clust.lst). A custom set of weights can be used to make predictions with the `dmpfold` command by passing the `-w` flag.
+
+Training an end-to-end protein structure prediction network is not easy. If you do want to try it, then it's highly recommended to start from a pre-trained model rather than training from scratch. Here are some other tips that might help:
+
+1. Try to use a large memory GPU. DMPfold2 was trained mostly using an RTX 8000 with 48 Gb RAM, however a 32 Gb RAM V100 can also be used if you don't backpropagate too many iterations. See comments.
+
+2. If you must start from scratch, then it's advisable to start with short crops (croplen=100) before increasing the crop size later.
+
+3. Restarting from a new set of random weights can also help if early training progresses poorly.
+
+4. Be patient. On a single GPU, starting from scratch, the model will take approx. one or two months to train - which is why there is a built-in checkpoint facility to allow warm restarts.
