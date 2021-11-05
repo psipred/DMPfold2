@@ -1,3 +1,5 @@
+# DMPfold2 Neural Network definition - D.T.Jones 2020
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
