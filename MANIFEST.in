@@ -1,1 +1,2 @@
 include dmpfold/example/*
+include dmpfold/train_clust.lst
