@@ -72,7 +72,7 @@ def download_trained_model(modeldir):
 
 
 def aln_to_coords(input_file, device=default_device, template=None, iterations=default_iterations,
-                  minsteps=default_minsteps, return_alnmat=False):
+                  minsteps=default_minsteps, weights_file=None, return_alnmat=False):
     device = torch.device(device)
 
     # Create neural network model (depending on first command line parameter)
@@ -80,14 +80,21 @@ def aln_to_coords(input_file, device=default_device, template=None, iterations=d
 
     modeldir = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'trained_model')
 
-    if not os.path.isfile(os.path.join(modeldir, 'FINAL_fullmap_e2e_model_part1.pt')):
-        download_trained_model(modeldir)
+    if weights_file is None:
+        # Use standard weights
+        if not os.path.isfile(os.path.join(modeldir, 'FINAL_fullmap_e2e_model_part1.pt')):
+            download_trained_model(modeldir)
 
-    # Model parameters stored as two files to get round GitHub's file size limit
-    trained_model = torch.load(os.path.join(modeldir, 'FINAL_fullmap_e2e_model_part1.pt'),
-                                map_location=lambda storage, loc: storage)
-    trained_model.update(torch.load(os.path.join(modeldir, 'FINAL_fullmap_e2e_model_part2.pt'),
-                                map_location=lambda storage, loc: storage))
+        # Model parameters stored as two files to get round GitHub's file size limit
+        trained_model = torch.load(os.path.join(modeldir, 'FINAL_fullmap_e2e_model_part1.pt'),
+                                    map_location=lambda storage, loc: storage)
+        trained_model.update(torch.load(os.path.join(modeldir, 'FINAL_fullmap_e2e_model_part2.pt'),
+                                    map_location=lambda storage, loc: storage))
+        
+    else:
+        # Use weights specified in file
+        trained_model = torch.load(weights_file, map_location=lambda storage, loc: storage)
+
     network.load_state_dict(trained_model)
 
     aln = []
@@ -169,12 +176,15 @@ def run_dmpfold():
                         help='number of iteration cycles')
     parser.add_argument('-m', '--minsteps', type=int, default=default_minsteps, required=False,
                         help='number of minimization steps')
+    parser.add_argument('-w', '--model_weights', type=str, required=False,
+                        help='use a custom set of model weights')
     # Parse the argument
     args = parser.parse_args()
 
     coords, confs, alnmat = aln_to_coords(args.input_file, device=args.device,
                                           template=args.template, iterations=args.iterations,
-                                          minsteps=args.minsteps, return_alnmat=True)
+                                          minsteps=args.minsteps, weights_file=args.model_weights,
+                                          return_alnmat=True)
 
     rnamedict = {
         0:'ALA', 1:'ARG', 2:'ASN', 3:'ASP', 4:'CYS', 5:'GLN', 6:'GLU', 7:'GLY', 8:'HIS',
