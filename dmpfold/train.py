@@ -245,6 +245,7 @@ def main(num_epochs=1000):
     val_err_min = 1e32
 
     # Load current model snapshot
+    # Look for a single model file first and fall back to the repository weights
     if RESTART_FLAG:
         if os.path.isfile('fullmap_e2e_model_train.pt'):
             pretrained_dict = torch.load('fullmap_e2e_model_train.pt', map_location=lambda storage, loc: storage)
@@ -417,4 +418,5 @@ def main(num_epochs=1000):
             }, 'checkpoint.pt')
 
 if __name__ == "__main__":
+    torch.multiprocessing.set_start_method('spawn')
     main()
