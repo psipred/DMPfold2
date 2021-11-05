@@ -246,7 +246,16 @@ def main(num_epochs=1000):
 
     # Load current model snapshot
     if RESTART_FLAG:
-        pretrained_dict = torch.load('fullmap_e2e_model_train.pt', map_location=lambda storage, loc: storage)
+        if os.path.isfile('fullmap_e2e_model_train.pt'):
+            pretrained_dict = torch.load('fullmap_e2e_model_train.pt', map_location=lambda storage, loc: storage)
+        elif os.path.isfile(os.path.join('trained_model', 'FINAL_fullmap_e2e_model_part1.pt')):
+            pretrained_dict = torch.load(os.path.join('trained_model', 'FINAL_fullmap_e2e_model_part1.pt'),
+                                            map_location=lambda storage, loc: storage)
+            pretrained_dict.update(torch.load(os.path.join('trained_model', 'FINAL_fullmap_e2e_model_part2.pt'),
+                                            map_location=lambda storage, loc: storage))
+        else:
+            print("Restart flag is True but cannot find existing model weights")
+            sys.exit()
         model_dict = network.state_dict()
         pretrained_dict = {k: v for k, v in pretrained_dict.items() if (k in model_dict) and (model_dict[k].shape == pretrained_dict[k].shape)}
         network.load_state_dict(pretrained_dict, strict=False)
@@ -349,7 +358,6 @@ def main(num_epochs=1000):
         random.seed()
 
         for sample_batch in data_loader:
-            print("hi")
             network.zero_grad(set_to_none=True)
             random.shuffle(sample_batch)
             batch_len = len(sample_batch)

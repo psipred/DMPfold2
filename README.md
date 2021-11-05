@@ -81,9 +81,9 @@ This version used three approaches to generate models from constraints - CNS, XP
 
 ### Training
 
-We provide a script to train DMPfold2 [here](https://github.com/psipred/DMPfold2/tree/master/dmpfold/train.py). You will need to clone the repository, download and extract the [training data]() into the `dmpfold` directory (20 GB download, 55 GB extracted), and may wish to download the pre-trained [model weights](). The list of training/validation samples, clustered at 30% sequence identitity, is [here](https://github.com/psipred/DMPfold2/tree/master/dmpfold/train_clust.lst). A custom set of weights can be used to make predictions with the `dmpfold` command by passing the `-w` flag.
+We provide a script to train DMPfold2 [here](https://github.com/psipred/DMPfold2/tree/master/dmpfold/train.py). You will need to clone the repository then download and extract the [training data](https://rdr.ucl.ac.uk/articles/dataset/Protein_structures_predicted_using_DMPfold2/14979990) into the `dmpfold` directory (20 GB download, 55 GB extracted). The list of training/validation samples, clustered at 30% sequence identitity, is [here](https://github.com/psipred/DMPfold2/tree/master/dmpfold/train_clust.lst). A custom set of weights can be used to make predictions with the `dmpfold` command by using the `-w` flag.
 
-Training an end-to-end protein structure prediction network is not easy. If you do want to try it, then it's highly recommended to start from a pre-trained model rather than training from scratch. Here are some other tips that might help:
+Training an end-to-end protein structure prediction network is not easy. If you do want to try it, then it's highly recommended to start from a pre-trained model rather than training from scratch. By default the training script starts from the trained model in the repository. Here are some other tips that might help:
 
 1. Try to use a large memory GPU. DMPfold2 was trained mostly using an RTX 8000 with 48 Gb RAM, however a 32 Gb RAM V100 can also be used if you don't backpropagate too many iterations. See comments.
 
