@@ -5,7 +5,7 @@
 DMPfold2 is a fast and accurate method for protein structure prediction.
 It uses learned representations of multiple sequence alignments and end-to-end model generation to quickly generate models from alignments.
 
-If you use DMPfold2, please cite the paper: Ultrafast end-to-end protein structure prediction enables high-throughput exploration of uncharacterised proteins, S M Kandathil, J G Greener, A M Lau, D T Jones, bioRxiv (2021) - [link](https://www.biorxiv.org/content/10.1101/2020.11.27.401232).
+If you use DMPfold2, please cite the paper: Ultrafast end-to-end protein structure prediction enables high-throughput exploration of uncharacterised proteins, S M Kandathil, J G Greener, A M Lau, D T Jones, PNAS 119(4) e2113348119 (2022) - [link](https://www.pnas.org/content/119/4/e2113348119).
 
 Protein structures predicted from the BFD and Pfam are available via the UCL Research Data Repository (doi: 10.5522/04/14979990) - [link](https://rdr.ucl.ac.uk/articles/dataset/Protein_structures_predicted_using_DMPfold2/14979990).
 
