@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="dmpfold",
-    version="2.0.dev1",
+    version="2.0",
     author="UCL Bioinformatics Group",
     author_email="psipred@cs.ucl.ac.uk",
     description="Protein structure prediction with the DMPfold2 method",
