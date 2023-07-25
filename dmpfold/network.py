@@ -244,7 +244,8 @@ class GRUResNet(nn.Module):
         dm = torch.abs(dm)
         # See https://math.stackexchange.com/questions/156161/finding-the-coordinates-of-points-from-distance-matrix
         M = 0.5 * (dm[:, 0:1, :].expand(-1, nres, -1) ** 2 + dm[:, :, 0:1].expand(-1, -1, nres) ** 2 - dm ** 2)
-        w, v = torch.symeig(M.float(), eigenvectors=True)
+        # w, v = torch.symeig(M.float(), eigenvectors=True)
+        w, v = torch.linalg.eigh(M.float())
         w = torch.clamp(F.relu(w, inplace=False), min = 1e-8)
         w = torch.diag_embed(w.sqrt())
         mds_coords = torch.matmul(v, w)[:, :, -8:]
@@ -289,7 +290,8 @@ class GRUResNet(nn.Module):
             dm = torch.abs(dm)
             # See https://math.stackexchange.com/questions/156161/finding-the-coordinates-of-points-from-distance-matrix
             M = 0.5 * (dm[:, 0:1, :].expand(-1, nres, -1) ** 2 + dm[:, :, 0:1].expand(-1, -1, nres) ** 2 - dm ** 2)
-            w, v = torch.symeig(M.float(), eigenvectors=True)
+            # w, v = torch.symeig(M.float(), eigenvectors=True)
+            w, v = torch.linalg.eigh(M.float())
             w = torch.clamp(F.relu(w, inplace=False), min = 1e-8)
             w = torch.diag_embed(w.sqrt())
             mds_coords = torch.matmul(v, w)[:, :, -8:]
